@@ -1,0 +1,9 @@
+# IDE
+.idea/
+
+# Python
+*.py[cod]
+__pycache__/
+
+# OS
+.DS_Store
