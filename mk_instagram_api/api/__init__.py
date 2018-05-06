@@ -55,6 +55,58 @@ class InstagramAPI:
             self.uuid
         )
 
+    def __send_request(self, endpoint, post=None, login=False):
+        verify = False  # don't show request warning
+
+        if not self.is_logged_in and not login:
+            raise RequireLogin()
+
+        self.session.headers.update({
+            'Connection': 'close',
+            'Accept': '*/*',
+            'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Cookie2': '$Version=1',
+            'Accept-Language': 'en-US',
+            'User-Agent': constant.USER_AGENT,
+        })
+
+        while True:
+            try:
+                if post is not None:
+                    response = self.session.post(
+                        constant.API_URL + endpoint,
+                        data=post,
+                        verify=verify
+                    )
+                else:
+                    response = self.session.get(
+                        constant.API_URL + endpoint,
+                        verify=verify
+                    )
+                break
+            except Exception as e:
+                logger.error('Except on SendRequest (wait 60 sec and resend): {}'.format(e))
+                time.sleep(60)
+
+        if response.status_code == 200:
+            self.last_response = response
+            self.last_json = json.loads(response.text)
+            return True
+        else:
+            logger.error("Request return {} error!".format(response.status_code))
+            # for debugging
+            try:
+                self.last_response = response
+                self.last_json = json.loads(response.text)
+                logger.debug(self.last_json)
+                if 'error_type' in self.last_json and self.last_json['error_type'] == 'sentry_block':
+                    raise SentryBlockException(self.last_json['message'])
+            except SentryBlockException:
+                raise
+            except Exception:
+                pass
+            return False
+
     def set_proxy(self, proxy=None):
         """
         Set proxy for all requests::
@@ -73,7 +125,7 @@ class InstagramAPI:
     def login(self, force=False):
         if not self.is_logged_in or force:
             guid = util.generate_uuid(False)
-            if self.send_request(
+            if self.__send_request(
                     'si/fetch_headers/'
                     '?challenge_type=signup'
                     '&guid={}'.format(
@@ -93,7 +145,7 @@ class InstagramAPI:
                     'login_attempt_count': '0',
                 }
 
-                if self.send_request(
+                if self.__send_request(
                         'accounts/login/',
                         util.generate_signature(json.dumps(data)),
                         True
@@ -119,23 +171,23 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'experiments': constant.EXPERIMENTS,
         })
-        return self.send_request(
+        return self.__send_request(
             'qe/sync/',
             util.generate_signature(data)
         )
 
     def auto_complete_user_list(self):
-        return self.send_request(
+        return self.__send_request(
             'friendships/autocomplete_user_list/'
         )
 
     def timeline_feed(self):
-        return self.send_request(
+        return self.__send_request(
             'feed/timeline/'
         )
 
     def megaphone_log(self):
-        return self.send_request(
+        return self.__send_request(
             'megaphone/log/'
         )
 
@@ -147,13 +199,13 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'experiment': 'ig_android_profile_contextual_feed',
         })
-        return self.send_request(
+        return self.__send_request(
             'qe/expose/',
             util.generate_signature(data)
         )
 
     def logout(self):
-        return self.send_request(
+        return self.__send_request(
             'accounts/logout/'
         )
 
@@ -431,7 +483,7 @@ class InstagramAPI:
             'caption': caption_text,
             'children_metadata': children_metadata,
         }
-        self.send_request(
+        self.__send_request(
             endpoint,
             util.generate_signature(json.dumps(data))
         )
@@ -595,7 +647,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             'caption': caption,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/configure/?video=1',
             util.generate_signature(data)
         )
@@ -621,7 +673,7 @@ class InstagramAPI:
                 'source_height': h,
             },
         })
-        return self.send_request(
+        return self.__send_request(
             'media/configure/',
             util.generate_signature(data)
         )
@@ -633,7 +685,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'caption_text': caption_text,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/edit_media/'.format(media_id),
             util.generate_signature(data)
         )
@@ -644,7 +696,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/remove/'.format(media_id),
             util.generate_signature(data)
         )
@@ -656,7 +708,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/info/'.format(media_id),
             util.generate_signature(data)
         )
@@ -669,7 +721,7 @@ class InstagramAPI:
             'media_type': media_type,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/delete/'.format(media_id),
             util.generate_signature(data)
         )
@@ -683,13 +735,13 @@ class InstagramAPI:
             'new_password1': new_password,
             'new_password2': new_password,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/change_password/',
             util.generate_signature(data)
         )
 
     def explore(self):
-        return self.send_request(
+        return self.__send_request(
             'discover/explore/'
         )
 
@@ -700,7 +752,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'comment_text': comment_text,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/comment/'.format(media_id),
             util.generate_signature(data)
         )
@@ -711,7 +763,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/comment/{}/delete/'.format(media_id, comment_id),
             util.generate_signature(data)
         )
@@ -726,7 +778,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/remove_profile_picture/',
             util.generate_signature(data)
         )
@@ -737,7 +789,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/set_private/',
             util.generate_signature(data)
         )
@@ -748,7 +800,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/set_public/',
             util.generate_signature(data)
         )
@@ -759,7 +811,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/current_user/?edit=true',
             util.generate_signature(data)
         )
@@ -777,18 +829,18 @@ class InstagramAPI:
             'email': email,
             'gender': gender,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/edit_profile/',
             util.generate_signature(data)
         )
 
     def get_story(self, user_id):
-        return self.send_request(
+        return self.__send_request(
             'feed/user/{}/reel_media/'.format(user_id)
         )
 
     def get_username_info(self, user_id):
-        return self.send_request(
+        return self.__send_request(
             'users/{}/info/'.format(user_id)
         )
 
@@ -796,22 +848,22 @@ class InstagramAPI:
         return self.get_username_info(self.user_id)
 
     def get_self_saved_media(self):
-        return self.send_request(
+        return self.__send_request(
             'feed/saved'
         )
 
     def get_recent_activity(self):
-        return self.send_request(
+        return self.__send_request(
             'news/inbox/'
         )
 
     def get_following_recent_activity(self):
-        return self.send_request(
+        return self.__send_request(
             'news/'
         )
 
     def get_v2_inbox(self):
-        return self.send_request(
+        return self.__send_request(
             'direct_v2/inbox/'
         )
 
@@ -819,10 +871,10 @@ class InstagramAPI:
         endpoint = 'direct_v2/threads/{0}'.format(thread)
         if cursor is not None:
             endpoint += '?cursor={0}'.format(cursor)
-        return self.send_request(endpoint)
+        return self.__send_request(endpoint)
 
     def get_usertags(self, user_id):
-        return self.send_request(
+        return self.__send_request(
             'usertags/{}/feed/'
             '?rank_token={}'
             '&ranked_content=true'.format(
@@ -835,7 +887,7 @@ class InstagramAPI:
         return self.get_usertags(self.user_id)
 
     def tag_feed(self, tag):
-        return self.send_request(
+        return self.__send_request(
             'feed/tag/{}/'
             '?rank_token={}'
             '&ranked_content=true'.format(
@@ -845,12 +897,12 @@ class InstagramAPI:
         )
 
     def get_media_likers(self, media_id):
-        return self.send_request(
+        return self.__send_request(
             'media/{}/likers/'.format(media_id)
         )
 
     def get_geo_media(self, user_id):
-        return self.send_request(
+        return self.__send_request(
             'maps/user/{}/'.format(user_id)
         )
 
@@ -858,7 +910,7 @@ class InstagramAPI:
         return self.get_geo_media(self.user_id)
 
     def fb_user_search(self, query):
-        return self.send_request(
+        return self.__send_request(
             'fbsearch/topsearch/'
             '?context=blended'
             '&query={}'
@@ -869,7 +921,7 @@ class InstagramAPI:
         )
 
     def search_users(self, query):
-        return self.send_request(
+        return self.__send_request(
             'users/search/'
             '?ig_sig_key_version={}'
             '&is_typeahead=true'
@@ -882,12 +934,12 @@ class InstagramAPI:
         )
 
     def search_username(self, username):
-        return self.send_request(
+        return self.__send_request(
             'users/{}/usernameinfo/'.format(username)
         )
 
     def sync_from_address_book(self, contacts):
-        return self.send_request(
+        return self.__send_request(
             'address_book/link/?include=extra_display_name,thumbnails',
             "contacts={}".format(
                 json.dumps(contacts)
@@ -895,7 +947,7 @@ class InstagramAPI:
         )
 
     def search_tags(self, query):
-        return self.send_request(
+        return self.__send_request(
             'tags/search/'
             '?is_typeahead=true'
             '&q={}'
@@ -906,7 +958,7 @@ class InstagramAPI:
         )
 
     def get_timeline(self):
-        return self.send_request(
+        return self.__send_request(
             'feed/timeline/'
             '?rank_token={}'
             '&ranked_content=true'.format(
@@ -915,7 +967,7 @@ class InstagramAPI:
         )
 
     def get_user_feed(self, user_id, maxid='', min_timestamp=None):
-        return self.send_request(
+        return self.__send_request(
             'feed/user/{}/'
             '?max_id={}'
             '&min_timestamp={}'
@@ -932,7 +984,7 @@ class InstagramAPI:
         return self.get_user_feed(self.user_id, maxid, min_timestamp)
 
     def get_hashtag_feed(self, hashtag_string, maxid=''):
-        return self.send_request(
+        return self.__send_request(
             'feed/tag/{}/'
             '?max_id={}'
             '&rank_token={}'
@@ -944,7 +996,7 @@ class InstagramAPI:
         )
 
     def search_location(self, query):
-        return self.send_request(
+        return self.__send_request(
             'fbsearch/places/'
             '?rank_token={}'
             '&query={}'.format(
@@ -954,7 +1006,7 @@ class InstagramAPI:
         )
 
     def get_location_feed(self, location_id, maxid=''):
-        return self.send_request(
+        return self.__send_request(
             'feed/location/{}/'
             '?max_id={}'
             '&rank_token={}'
@@ -966,7 +1018,7 @@ class InstagramAPI:
         )
 
     def get_popular_feed(self):
-        return self.send_request(
+        return self.__send_request(
             'feed/popular/'
             '?people_teaser_supported=1'
             '&rank_token={}'
@@ -984,14 +1036,14 @@ class InstagramAPI:
         if maxid:
             query_string['max_id'] = maxid
         url += urllib.parse.urlencode(query_string)
-        return self.send_request(url)
+        return self.__send_request(url)
 
     def get_self_user_followings(self):
         return self.get_user_followings(self.user_id)
 
     def get_user_followers(self, user_id, maxid=''):
         if maxid == '':
-            return self.send_request(
+            return self.__send_request(
                 'friendships/{}/followers/'
                 '?rank_token={}'.format(
                     user_id,
@@ -999,7 +1051,7 @@ class InstagramAPI:
                 )
             )
         else:
-            return self.send_request(
+            return self.__send_request(
                 'friendships/{}/followers/'
                 '?rank_token={}'
                 '&max_id={}'.format(
@@ -1013,7 +1065,7 @@ class InstagramAPI:
         return self.get_user_followers(self.user_id)
 
     def get_pending_follow_requests(self):
-        return self.send_request(
+        return self.__send_request(
             'friendships/pending'
         )
 
@@ -1024,7 +1076,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/like/'.format(media_id),
             util.generate_signature(data)
         )
@@ -1036,7 +1088,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/unlike/'.format(media_id),
             util.generate_signature(data)
         )
@@ -1048,7 +1100,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/save/'.format(media_id),
             util.generate_signature(data)
         )
@@ -1060,13 +1112,13 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_id': media_id,
         })
-        return self.send_request(
+        return self.__send_request(
             'media/{}/unsave/'.format(media_id),
             util.generate_signature(data)
         )
 
     def get_media_comments(self, media_id, max_id=''):
-        return self.send_request(
+        return self.__send_request(
             'media/{}/comments/'
             '?max_id={}'.format(
                 media_id,
@@ -1082,13 +1134,13 @@ class InstagramAPI:
             'phone_number': phone,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'accounts/set_phone_and_name/',
             util.generate_signature(data)
         )
 
     def get_direct_share(self):
-        return self.send_request(
+        return self.__send_request(
             'direct_share/inbox/'
         )
 
@@ -1103,7 +1155,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/approve/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1115,7 +1167,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/ignore/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1127,7 +1179,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/create/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1139,7 +1191,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/destroy/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1151,7 +1203,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/block/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1163,7 +1215,7 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/unblock/{}/'.format(user_id),
             util.generate_signature(data)
         )
@@ -1175,13 +1227,13 @@ class InstagramAPI:
             'user_id': user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'friendships/show/{}/'.format(user_id),
             util.generate_signature(data)
         )
 
     def get_liked_media(self, maxid=''):
-        return self.send_request(
+        return self.__send_request(
             'feed/liked/'
             '?max_id={}'.format(
                 maxid
@@ -1199,7 +1251,7 @@ class InstagramAPI:
             'internal_only': 0,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'live/create/',
             util.generate_signature(data)
         )
@@ -1211,7 +1263,7 @@ class InstagramAPI:
             'should_send_notifications': int(send_notification),
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'live/{}/start'.format(broadcast_id),
             util.generate_signature(data)
         )
@@ -1222,7 +1274,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'live/{}/end_broadcast/'.format(broadcast_id),
             util.generate_signature(data)
         )
@@ -1234,7 +1286,7 @@ class InstagramAPI:
             '_uid': self.user_id,
             '_csrftoken': self.token,
         })
-        return self.send_request(
+        return self.__send_request(
             'live/{}/add_to_post_live/'.format(broadcast_id),
             util.generate_signature(data)
         )
@@ -1255,58 +1307,6 @@ class InstagramAPI:
             body += u'\r\n\r\n{data}\r\n'.format(data=b['data'])
         body += u'--{boundary}--'.format(boundary=boundary)
         return body
-
-    def send_request(self, endpoint, post=None, login=False):
-        verify = False  # don't show request warning
-
-        if not self.is_logged_in and not login:
-            raise RequireLogin()
-
-        self.session.headers.update({
-            'Connection': 'close',
-            'Accept': '*/*',
-            'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Cookie2': '$Version=1',
-            'Accept-Language': 'en-US',
-            'User-Agent': constant.USER_AGENT,
-        })
-
-        while True:
-            try:
-                if post is not None:
-                    response = self.session.post(
-                        constant.API_URL + endpoint,
-                        data=post,
-                        verify=verify
-                    )
-                else:
-                    response = self.session.get(
-                        constant.API_URL + endpoint,
-                        verify=verify
-                    )
-                break
-            except Exception as e:
-                logger.error('Except on SendRequest (wait 60 sec and resend): {}'.format(e))
-                time.sleep(60)
-
-        if response.status_code == 200:
-            self.last_response = response
-            self.last_json = json.loads(response.text)
-            return True
-        else:
-            logger.error("Request return {} error!".format(response.status_code))
-            # for debugging
-            try:
-                self.last_response = response
-                self.last_json = json.loads(response.text)
-                logger.debug(self.last_json)
-                if 'error_type' in self.last_json and self.last_json['error_type'] == 'sentry_block':
-                    raise SentryBlockException(self.last_json['message'])
-            except SentryBlockException:
-                raise
-            except Exception:
-                pass
-            return False
 
     def get_total_followers(self, user_id):
         followers = []
