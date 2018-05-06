@@ -535,7 +535,7 @@ class InstagramAPI(object):
         raise ResponseError(response.status_code, response)
 
     def direct_share(self, media_id, recipients, text=None):
-        if not isinstance(position, list):  # FIXME
+        if not isinstance(recipients, list):
             recipients = [str(recipients)]
         recipient_users = '"",""'.join(str(r) for r in recipients)
         endpoint = 'direct_v2/threads/broadcast/media_share/?media_type=photo'
