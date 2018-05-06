@@ -740,7 +740,7 @@ class InstagramAPI:
             return False
 
     def direct_message(self, text, recipients):
-        if type(recipients) != type([]):
+        if not isinstance(recipients, list):
             recipients = [str(recipients)]
         recipient_users = '"",""'.join(str(r) for r in recipients)
         endpoint = 'direct_v2/threads/broadcast/text/'
