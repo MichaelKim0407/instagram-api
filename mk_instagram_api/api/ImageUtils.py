@@ -2,7 +2,7 @@ import imghdr
 import struct
 
 
-def getImageSize(fname):
+def get_image_size(fname):
     with open(fname, 'rb') as fhandle:
         head = fhandle.read(24)
         if len(head) != 24:
