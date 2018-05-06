@@ -6,7 +6,7 @@ DEVICE_SETTINTS = {
     'manufacturer': 'Xiaomi',
     'model': 'HM 1SW',
     'android_version': 18,
-    'android_release': '4.3'
+    'android_release': '4.3',
 }
 USER_AGENT = 'Instagram 10.26.0 Android ({android_version}/{android_release}; ' \
              '320dpi; ' \
