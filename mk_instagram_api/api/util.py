@@ -22,11 +22,14 @@ def generate_signature(data, skip_quote=False):
         parsed_data = data
     else:
         parsed_data = urllib.parse.quote(data)
-    signed_body = hmac.new(
-        constant.IG_SIG_KEY.encode('utf-8'),
-        data.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest() + '.' + parsed_data
+    signed_body = '{}.{}'.format(
+        hmac.new(
+            constant.IG_SIG_KEY.encode('utf-8'),
+            data.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest(),
+        parsed_data
+    )
     return "ig_sig_key_version={}&&signed_body={}".format(
         constant.SIG_KEY_VERSION,
         signed_body
@@ -35,7 +38,9 @@ def generate_signature(data, skip_quote=False):
 
 def generate_device_id(seed):
     volatile_seed = "12345"
-    return 'android-' + md5_hash(seed.encode('utf-8') + volatile_seed.encode('utf-8'))[:16]
+    return 'android-{}'.format(
+        md5_hash(seed.encode('utf-8') + volatile_seed.encode('utf-8'))[:16]
+    )
 
 
 def generate_uuid(hyphens=True):
