@@ -33,7 +33,7 @@ class InstagramAPI:
         self.username = username
         self.password = password
         self.device_id = self.__generate_device_id()
-        self.uuid = util.generate_uuid(True)
+        self.uuid = util.generate_uuid()
 
         self.is_logged_in = False
         self.session = requests.Session()
@@ -63,11 +63,14 @@ class InstagramAPI:
 
     def login(self, force=False):
         if not self.is_logged_in or force:
-            if (
-                    self.send_request('si/fetch_headers/?challenge_type=signup&guid=' + util.generate_uuid(False), None,
-                                      True)):
+            guid = util.generate_uuid(False)
+            if self.send_request(
+                    'si/fetch_headers/?challenge_type=signup&guid=' + guid,
+                    None,
+                    True
+            ):
 
-                data = {'phone_id': util.generate_uuid(True),
+                data = {'phone_id': util.generate_uuid(),
                         '_csrftoken': self.last_response.cookies['csrftoken'],
                         'username': self.username,
                         'guid': self.uuid,
@@ -75,7 +78,11 @@ class InstagramAPI:
                         'password': self.password,
                         'login_attempt_count': '0'}
 
-                if self.send_request('accounts/login/', util.generate_signature(json.dumps(data)), True):
+                if self.send_request(
+                        'accounts/login/',
+                        util.generate_signature(json.dumps(data)),
+                        True
+                ):
                     self.is_logged_in = True
                     self.username_id = self.last_json["logged_in_user"]["pk"]
                     self.rank_token = "%s_%s" % (self.username_id, self.uuid)

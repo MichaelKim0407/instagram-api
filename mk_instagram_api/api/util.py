@@ -38,9 +38,9 @@ def generate_device_id(seed):
     return 'android-' + md5_hash(seed.encode('utf-8') + volatile_seed.encode('utf-8'))[:16]
 
 
-def generate_uuid(type):  # TODO what does `type` mean; need better param name
+def generate_uuid(hyphens=True):
     generated_uuid = str(uuid.uuid4())
-    if type:
+    if hyphens:
         return generated_uuid
     else:
         return generated_uuid.replace('-', '')
