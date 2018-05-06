@@ -25,6 +25,8 @@ except ImportError:
 # Turn off InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+logger = logging.getLogger('mk_instagram_api.api')
+
 
 class InstagramAPI:
     def __init__(self, username, password):
@@ -55,7 +57,7 @@ class InstagramAPI:
         """
 
         if proxy is not None:
-            print('Set proxy!')
+            logger.info('Set proxy!')
             proxies = {'http': proxy, 'https': proxy}
             self.session.proxies.update(proxies)
 
@@ -84,7 +86,7 @@ class InstagramAPI:
                     self.timeline_feed()
                     self.get_v2_inbox()
                     self.get_recent_activity()
-                    print("Login success!\n")
+                    logger.info("Login success!")
                     return True
 
     def sync_features(self):
@@ -356,7 +358,7 @@ class InstagramAPI:
             self.last_json = json.loads(response.text)
             return True
         else:
-            print("Request return " + str(response.status_code) + " error!")
+            logger.error("Request return " + str(response.status_code) + " error!")
             # for debugging
             try:
                 self.last_response = response
@@ -412,7 +414,7 @@ class InstagramAPI:
             self.last_json = json.loads(response.text)
             return True
         else:
-            print("Request return " + str(response.status_code) + " error!")
+            logger.error("Request return " + str(response.status_code) + " error!")
             # for debugging
             try:
                 self.last_response = response
@@ -469,7 +471,7 @@ class InstagramAPI:
             self.last_json = json.loads(response.text)
             return True
         else:
-            print("Request return " + str(response.status_code) + " error!")
+            logger.error("Request return " + str(response.status_code) + " error!")
             # for debugging
             try:
                 self.last_response = response
@@ -928,7 +930,7 @@ class InstagramAPI:
                     response = self.session.get(constant.API_URL + endpoint, verify=verify)
                 break
             except Exception as e:
-                print('Except on SendRequest (wait 60 sec and resend): ' + str(e))
+                logger.error('Except on SendRequest (wait 60 sec and resend): ' + str(e))
                 time.sleep(60)
 
         if response.status_code == 200:
@@ -936,12 +938,12 @@ class InstagramAPI:
             self.last_json = json.loads(response.text)
             return True
         else:
-            print("Request return " + str(response.status_code) + " error!")
+            logger.error("Request return " + str(response.status_code) + " error!")
             # for debugging
             try:
                 self.last_response = response
                 self.last_json = json.loads(response.text)
-                print(self.last_json)
+                logger.debug(self.last_json)
                 if 'error_type' in self.last_json and self.last_json['error_type'] == 'sentry_block':
                     raise SentryBlockException(self.last_json['message'])
             except SentryBlockException:
