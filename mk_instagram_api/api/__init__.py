@@ -28,6 +28,15 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 logger = logging.getLogger('mk_instagram_api.api')
 
 
+def endpoint(uri):
+    """
+    Specifies the endpoint used by a method. This is for readability only.
+    :param uri:
+    :return:
+    """
+    return lambda x: x
+
+
 class InstagramAPI(object):
     def __init__(self, username, password):
         self.username = username
@@ -151,53 +160,545 @@ class InstagramAPI(object):
         self.get_recent_activity()
         logger.info("Login success!")
 
-    def sync_features(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'id': self.user_id,
-            '_csrftoken': self.token,
-            'experiments': constant.EXPERIMENTS,
-        })
-        return self.__send_request(
-            'qe/sync/',
-            util.generate_signature(data)
-        )
-
-    def auto_complete_user_list(self):
-        return self.__send_request(
-            'friendships/autocomplete_user_list/'
-        )
-
-    def timeline_feed(self):
-        return self.__send_request(
-            'feed/timeline/'
-        )
-
-    def megaphone_log(self):
-        return self.__send_request(
-            'megaphone/log/'
-        )
-
-    def expose(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'id': self.user_id,
-            '_csrftoken': self.token,
-            'experiment': 'ig_android_profile_contextual_feed',
-        })
-        return self.__send_request(
-            'qe/expose/',
-            util.generate_signature(data)
-        )
-
     def logout(self):
         self.is_logged_in = False
         return self.__send_request(
             'accounts/logout/'
         )
 
+    # --- profile ---
+
+    @endpoint('accounts/change_password/')
+    def change_password(self, new_password):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'old_password': self.password,
+            'new_password1': new_password,
+            'new_password2': new_password,
+        })
+        return self.__send_request(
+            'accounts/change_password/',
+            util.generate_signature(data)
+        )
+
+    def change_profile_picture(self, photo):
+        # TODO Instagram.php 705-775
+        raise NotImplementedError()
+
+    @endpoint('accounts/remove_profile_picture/')
+    def remove_profile_picture(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'accounts/remove_profile_picture/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('accounts/set_private/')
+    def set_private_account(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'accounts/set_private/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('accounts/set_public/')
+    def set_public_account(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'accounts/set_public/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('accounts/current_user/?edit=true')
+    def get_profile_data(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'accounts/current_user/?edit=true',
+            util.generate_signature(data)
+        )
+
+    @endpoint('accounts/edit_profile/')
+    def edit_profile(self, url, phone, first_name, biography, email, gender):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'external_url': url,
+            'phone_number': phone,
+            'username': self.username,
+            'full_name': first_name,
+            'biography': biography,
+            'email': email,
+            'gender': gender,
+        })
+        return self.__send_request(
+            'accounts/edit_profile/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('accounts/set_phone_and_name/')
+    def set_name_and_phone(self, name='', phone=''):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'first_name': name,
+            'phone_number': phone,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'accounts/set_phone_and_name/',
+            util.generate_signature(data)
+        )
+
+    # --- user interactions ---
+
+    @endpoint('friendships/autocomplete_user_list/')
+    def auto_complete_user_list(self):
+        return self.__send_request(
+            'friendships/autocomplete_user_list/'
+        )
+
+    @endpoint('friendships/{}/following/')
+    def get_user_followings(self, user_id, maxid=''):
+        url = 'friendships/{}/following/?'.format(self.user_id)
+        query_string = {
+            'ig_sig_key_version': constant.SIG_KEY_VERSION,
+            'rank_token': self.rank_token,
+        }
+        if maxid:
+            query_string['max_id'] = maxid
+        url += urllib.parse.urlencode(query_string)
+        return self.__send_request(url)
+
+    @endpoint('friendships/{}/followers/')
+    def get_user_followers(self, user_id, maxid=''):
+        if maxid == '':
+            return self.__send_request(
+                'friendships/{}/followers/'
+                '?rank_token={}'.format(
+                    user_id,
+                    self.rank_token
+                )
+            )
+        else:
+            return self.__send_request(
+                'friendships/{}/followers/'
+                '?rank_token={}'
+                '&max_id={}'.format(
+                    user_id,
+                    self.rank_token,
+                    maxid
+                )
+            )
+
+    @endpoint('friendships/pending')
+    def get_pending_follow_requests(self):
+        return self.__send_request(
+            'friendships/pending'
+        )
+
+    @endpoint('friendships/approve/{}/')
+    def approve(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/approve/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/ignore/{}/')
+    def ignore(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/ignore/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/create/{}/')
+    def follow(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/create/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/destroy/{}/')
+    def unfollow(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/destroy/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/block/{}/')
+    def block(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/block/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/unblock/{}/')
+    def unblock(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/unblock/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('friendships/show/{}/')
+    def user_friendship(self, user_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'user_id': user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'friendships/show/{}/'.format(user_id),
+            util.generate_signature(data)
+        )
+
+    # --- users ---
+
+    @endpoint('users/{}/info/')
+    def get_username_info(self, user_id):
+        return self.__send_request(
+            'users/{}/info/'.format(user_id)
+        )
+
+    @endpoint('users/search/')
+    def search_users(self, query):
+        return self.__send_request(
+            'users/search/'
+            '?ig_sig_key_version={}'
+            '&is_typeahead=true'
+            '&query={}'
+            '&rank_token={}'.format(
+                constant.SIG_KEY_VERSION,
+                query,
+                self.rank_token
+            )
+        )
+
+    @endpoint('users/{}/usernameinfo/')
+    def search_username(self, username):
+        return self.__send_request(
+            'users/{}/usernameinfo/'.format(username)
+        )
+
+    # --- feed ---
+
+    @endpoint('feed/timeline/')
+    def timeline_feed(self):
+        return self.__send_request(
+            'feed/timeline/'
+        )
+
+    @endpoint('feed/user/{}/reel_media/')
+    def get_story(self, user_id):
+        return self.__send_request(
+            'feed/user/{}/reel_media/'.format(user_id)
+        )
+
+    @endpoint('feed/saved')
+    def get_self_saved_media(self):
+        return self.__send_request(
+            'feed/saved'
+        )
+
+    @endpoint('feed/tag/{}/')
+    def tag_feed(self, tag):
+        return self.__send_request(
+            'feed/tag/{}/'
+            '?rank_token={}'
+            '&ranked_content=true'.format(
+                tag,
+                self.rank_token
+            )
+        )
+
+    @endpoint('feed/timeline/')
+    def get_timeline(self):
+        return self.__send_request(
+            'feed/timeline/'
+            '?rank_token={}'
+            '&ranked_content=true'.format(
+                self.rank_token
+            )
+        )
+
+    @endpoint('feed/user/{}/')
+    def get_user_feed(self, user_id, maxid='', min_timestamp=None):
+        return self.__send_request(
+            'feed/user/{}/'
+            '?max_id={}'
+            '&min_timestamp={}'
+            '&rank_token={}'
+            '&ranked_content=true'.format(
+                user_id,
+                maxid,
+                min_timestamp,
+                self.rank_token
+            )
+        )
+
+    @endpoint('feed/tag/{}/')
+    def get_hashtag_feed(self, hashtag_string, maxid=''):
+        return self.__send_request(
+            'feed/tag/{}/'
+            '?max_id={}'
+            '&rank_token={}'
+            '&ranked_content=true'.format(
+                hashtag_string,
+                maxid,
+                self.rank_token
+            )
+        )
+
+    @endpoint('fbsearch/places/')
+    def search_location(self, query):
+        return self.__send_request(
+            'fbsearch/places/'
+            '?rank_token={}'
+            '&query={}'.format(
+                self.rank_token,
+                query
+            )
+        )
+
+    @endpoint('feed/location/{}/')
+    def get_location_feed(self, location_id, maxid=''):
+        return self.__send_request(
+            'feed/location/{}/'
+            '?max_id={}'
+            '&rank_token={}'
+            '&ranked_content=true'.format(
+                location_id,
+                maxid,
+                self.rank_token
+            )
+        )
+
+    @endpoint('feed/popular/')
+    def get_popular_feed(self):
+        return self.__send_request(
+            'feed/popular/'
+            '?people_teaser_supported=1'
+            '&rank_token={}'
+            '&ranked_content=true'.format(
+                self.rank_token
+            )
+        )
+
+    @endpoint('feed/liked/')
+    def get_liked_media(self, maxid=''):
+        return self.__send_request(
+            'feed/liked/'
+            '?max_id={}'.format(
+                maxid
+            )
+        )
+
+    # --- posts ---
+
+    @endpoint('media/{}/edit_media/')
+    def edit_media(self, media_id, caption_text=''):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'caption_text': caption_text,
+        })
+        return self.__send_request(
+            'media/{}/edit_media/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/remove/')
+    def remove_self_tag(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'media/{}/remove/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/info/')
+    def media_info(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/info/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/delete/')
+    def delete_media(self, media_id, media_type=1):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_type': media_type,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/delete/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/likers/')
+    def get_media_likers(self, media_id):
+        return self.__send_request(
+            'media/{}/likers/'.format(media_id)
+        )
+
+    @endpoint('media/{}/like/')
+    def like(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/like/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/unlike/')
+    def unlike(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/unlike/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/save/')
+    def save(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/save/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/unsave/')
+    def unsave(self, media_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'media_id': media_id,
+        })
+        return self.__send_request(
+            'media/{}/unsave/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    # --- comments ---
+
+    @endpoint('media/{}/comment/')
+    def comment(self, media_id, comment_text):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+            'comment_text': comment_text,
+        })
+        return self.__send_request(
+            'media/{}/comment/'.format(media_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/comment/{}/delete/')
+    def delete_comment(self, media_id, comment_id):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            '_csrftoken': self.token,
+        })
+        return self.__send_request(
+            'media/{}/comment/{}/delete/'.format(media_id, comment_id),
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/{}/comments/')
+    def get_media_comments(self, media_id, max_id=''):
+        return self.__send_request(
+            'media/{}/comments/'
+            '?max_id={}'.format(
+                media_id,
+                max_id
+            )
+        )
+
+    # --- upload ---
+
+    @endpoint('upload/photo/')
     def upload_photo(self, photo, caption=None, upload_id=None, is_sidecar=None):
         if upload_id is None:
             upload_id = str(int(time.time() * 1000))
@@ -234,9 +735,10 @@ class InstagramAPI(object):
         if response.status_code != 200:
             raise UploadFailed()
 
-        self.configure(upload_id, photo, caption)
+        self.configure_photo(upload_id, photo, caption)
         self.expose()
 
+    @endpoint('upload/video/')
     def upload_video(self, video, thumbnail, caption=None, upload_id=None, is_sidecar=None):
         if upload_id is None:
             upload_id = str(int(time.time() * 1000))
@@ -321,6 +823,35 @@ class InstagramAPI(object):
         self.configure_video(upload_id, video, thumbnail, caption)
         self.expose()
 
+    @staticmethod
+    def __throw_if_invalid_usertags(usertags):
+        for user_position in usertags:
+            # Verify this usertag entry, ensuring that the entry is format
+            # ['position'=>[0.0,1.0],'user_id'=>'123'] and nothing else.
+            correct = True
+            if isinstance(user_position, dict):
+                position = user_position.get('position', None)
+                user_id = user_position.get('user_id', None)
+
+                if isinstance(position, list) and len(position) == 2:
+                    try:
+                        x = float(position[0])
+                        y = float(position[1])
+                        if x < 0.0 or x > 1.0:
+                            correct = False
+                        if y < 0.0 or y > 1.0:
+                            correct = False
+                    except Exception:
+                        correct = False
+                try:
+                    user_id = int(user_id)
+                    if user_id < 0:
+                        correct = False
+                except Exception:
+                    correct = False
+            if not correct:
+                raise Exception('Invalid user entry in usertags array.')
+
     def upload_album(self, media, caption=None, upload_id=None):
         if not media:
             raise AlbumSizeError(0)
@@ -338,7 +869,7 @@ class InstagramAPI(object):
             # $itemInternalMetadata = new InternalMetadata();
             # If usertags are provided, verify that the entries are valid.
             if item.get('usertags', []):
-                self.throw_if_invalid_usertags(item['usertags'])
+                self.__throw_if_invalid_usertags(item['usertags'])
 
             # Pre-process media details and throw if not allowed on Instagram.
             if item.get('type', '') == 'photo':
@@ -372,8 +903,13 @@ class InstagramAPI(object):
 
             elif item.get('type', '') == 'video':
                 # Attempt to upload the video data.
-                self.upload_video(item['file'], item['thumbnail'], caption=caption, is_sidecar=True,
-                                  upload_id=item_upload_id)
+                self.upload_video(
+                    item['file'],
+                    item['thumbnail'],
+                    caption=caption,
+                    is_sidecar=True,
+                    upload_id=item_upload_id
+                )
                 # $itemInternalMetadata = $this->ig->internal->uploadVideo(Constants::FEED_TIMELINE_ALBUM, $item['file'], $itemInternalMetadata);
                 # Attempt to upload the thumbnail, associated with our video's ID.
                 # $itemInternalMetadata->setPhotoUploadResponse($this->ig->internal->uploadPhotoData(Constants::FEED_TIMELINE_ALBUM, $itemInternalMetadata));
@@ -381,37 +917,71 @@ class InstagramAPI(object):
             item['internalMetadata']['upload_id'] = item_upload_id
 
         album_internal_metadata = {}
-        return self.configure_timeline_album(media, album_internal_metadata, caption_text=caption)
+        return self.configure_album(media, album_internal_metadata, caption_text=caption)
 
-    def throw_if_invalid_usertags(self, usertags):
-        for user_position in usertags:
-            # Verify this usertag entry, ensuring that the entry is format
-            # ['position'=>[0.0,1.0],'user_id'=>'123'] and nothing else.
-            correct = True
-            if isinstance(user_position, dict):
-                position = user_position.get('position', None)
-                user_id = user_position.get('user_id', None)
+    # --- configure ---
 
-                if isinstance(position, list) and len(position) == 2:
-                    try:
-                        x = float(position[0])
-                        y = float(position[1])
-                        if x < 0.0 or x > 1.0:
-                            correct = False
-                        if y < 0.0 or y > 1.0:
-                            correct = False
-                    except Exception:
-                        correct = False
-                try:
-                    user_id = int(user_id)
-                    if user_id < 0:
-                        correct = False
-                except Exception:
-                    correct = False
-            if not correct:
-                raise Exception('Invalid user entry in usertags array.')
+    @endpoint('media/configure/')
+    def configure_photo(self, upload_id, photo, caption=''):
+        (w, h) = get_image_size(photo)
+        data = json.dumps({
+            '_csrftoken': self.token,
+            'media_folder': 'Instagram',
+            'source_type': 4,
+            '_uid': self.user_id,
+            '_uuid': self.uuid,
+            'caption': caption,
+            'upload_id': upload_id,
+            'device': constant.DEVICE_SETTINTS,
+            'edits': {
+                'crop_original_size': [w * 1.0, h * 1.0],
+                'crop_center': [0.0, 0.0],
+                'crop_zoom': 1.0,
+            },
+            'extra': {
+                'source_width': w,
+                'source_height': h,
+            },
+        })
+        return self.__send_request(
+            'media/configure/',
+            util.generate_signature(data)
+        )
 
-    def configure_timeline_album(self, media, album_internal_metadata, caption_text='', location=None):
+    @endpoint('media/configure/?video=1')
+    def configure_video(self, upload_id, video, thumbnail, caption=''):
+        clip = VideoFileClip(video)
+        self.upload_photo(photo=thumbnail, caption=caption, upload_id=upload_id)
+        data = json.dumps({
+            'upload_id': upload_id,
+            'source_type': 3,
+            'poster_frame_index': 0,
+            'length': 0.00,
+            'audio_muted': False,
+            'filter_type': 0,
+            'video_result': 'deprecated',
+            'clips': {
+                'length': clip.duration,
+                'source_type': '3',
+                'camera_position': 'back',
+            },
+            'extra': {
+                'source_width': clip.size[0],
+                'source_height': clip.size[1],
+            },
+            'device': constant.DEVICE_SETTINTS,
+            '_csrftoken': self.token,
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'caption': caption,
+        })
+        return self.__send_request(
+            'media/configure/?video=1',
+            util.generate_signature(data)
+        )
+
+    @endpoint('media/configure_sidecar/')
+    def configure_album(self, media, album_internal_metadata, caption_text='', location=None):
         endpoint = 'media/configure_sidecar/'
         album_upload_id = util.generate_upload_id()
 
@@ -486,6 +1056,40 @@ class InstagramAPI(object):
             util.generate_signature(json.dumps(data))
         )
 
+    # --- direct messaging ---
+
+    @endpoint('direct_v2/inbox/')
+    def get_v2_inbox(self):
+        return self.__send_request(
+            'direct_v2/inbox/'
+        )
+
+    @endpoint('direct_v2/threads/{}')
+    def get_v2_threads(self, thread, cursor=None):
+        endpoint = 'direct_v2/threads/{}'.format(thread)
+        if cursor is not None:
+            endpoint += '?cursor={}'.format(cursor)
+        return self.__send_request(endpoint)
+
+    @staticmethod
+    def __build_body(bodies, boundary):
+        body = u''
+        for b in bodies:
+            body += u'--{boundary}\r\n'.format(boundary=boundary)
+            body += u'Content-Disposition: {b_type}; name="{b_name}"'.format(b_type=b['type'], b_name=b['name'])
+            _filename = b.get('filename', None)
+            _headers = b.get('headers', None)
+            if _filename:
+                _filename, ext = os.path.splitext(_filename)
+                body += u'; filename="pending_media_{uid}.{ext}"'.format(uid=util.generate_upload_id(), ext=ext)
+            if _headers and isinstance(_headers, list):
+                for h in _headers:
+                    body += u'\r\n{header}'.format(header=h)
+            body += u'\r\n\r\n{data}\r\n'.format(data=b['data'])
+        body += u'--{boundary}--'.format(boundary=boundary)
+        return body
+
+    @endpoint('direct_v2/threads/broadcast/text/')
     def direct_message(self, text, recipients):
         if not isinstance(recipients, list):
             recipients = [str(recipients)]
@@ -514,7 +1118,7 @@ class InstagramAPI(object):
                 'data': text or '',
             },
         ]
-        data = self.build_body(bodies, boundary)
+        data = self.__build_body(bodies, boundary)
         self.session.headers.update({
             'User-Agent': constant.USER_AGENT,
             'Proxy-Connection': 'keep-alive',
@@ -535,6 +1139,7 @@ class InstagramAPI(object):
 
         raise ResponseError(response.status_code, response)
 
+    @endpoint('direct_v2/threads/broadcast/media_share/?media_type=photo')
     def direct_share(self, media_id, recipients, text=None):
         if not isinstance(recipients, list):
             recipients = [str(recipients)]
@@ -568,7 +1173,7 @@ class InstagramAPI(object):
                 'data': text or '',
             },
         ]
-        data = self.build_body(bodies, boundary)
+        data = self.__build_body(bodies, boundary)
         self.session.headers.update({
             'User-Agent': constant.USER_AGENT,
             'Proxy-Connection': 'keep-alive',
@@ -585,625 +1190,9 @@ class InstagramAPI(object):
 
         return self.__handle_response(response)
 
-    def configure_video(self, upload_id, video, thumbnail, caption=''):
-        clip = VideoFileClip(video)
-        self.upload_photo(photo=thumbnail, caption=caption, upload_id=upload_id)
-        data = json.dumps({
-            'upload_id': upload_id,
-            'source_type': 3,
-            'poster_frame_index': 0,
-            'length': 0.00,
-            'audio_muted': False,
-            'filter_type': 0,
-            'video_result': 'deprecated',
-            'clips': {
-                'length': clip.duration,
-                'source_type': '3',
-                'camera_position': 'back',
-            },
-            'extra': {
-                'source_width': clip.size[0],
-                'source_height': clip.size[1],
-            },
-            'device': constant.DEVICE_SETTINTS,
-            '_csrftoken': self.token,
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'caption': caption,
-        })
-        return self.__send_request(
-            'media/configure/?video=1',
-            util.generate_signature(data)
-        )
+    # --- live ---
 
-    def configure(self, upload_id, photo, caption=''):
-        (w, h) = get_image_size(photo)
-        data = json.dumps({
-            '_csrftoken': self.token,
-            'media_folder': 'Instagram',
-            'source_type': 4,
-            '_uid': self.user_id,
-            '_uuid': self.uuid,
-            'caption': caption,
-            'upload_id': upload_id,
-            'device': constant.DEVICE_SETTINTS,
-            'edits': {
-                'crop_original_size': [w * 1.0, h * 1.0],
-                'crop_center': [0.0, 0.0],
-                'crop_zoom': 1.0,
-            },
-            'extra': {
-                'source_width': w,
-                'source_height': h,
-            },
-        })
-        return self.__send_request(
-            'media/configure/',
-            util.generate_signature(data)
-        )
-
-    def edit_media(self, media_id, caption_text=''):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'caption_text': caption_text,
-        })
-        return self.__send_request(
-            'media/{}/edit_media/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def remove_self_tag(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'media/{}/remove/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def media_info(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/info/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def delete_media(self, media_id, media_type=1):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_type': media_type,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/delete/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def change_password(self, new_password):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'old_password': self.password,
-            'new_password1': new_password,
-            'new_password2': new_password,
-        })
-        return self.__send_request(
-            'accounts/change_password/',
-            util.generate_signature(data)
-        )
-
-    def explore(self):
-        return self.__send_request(
-            'discover/explore/'
-        )
-
-    def comment(self, media_id, comment_text):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'comment_text': comment_text,
-        })
-        return self.__send_request(
-            'media/{}/comment/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def delete_comment(self, media_id, comment_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'media/{}/comment/{}/delete/'.format(media_id, comment_id),
-            util.generate_signature(data)
-        )
-
-    def change_profile_picture(self, photo):
-        # TODO Instagram.php 705-775
-        raise NotImplementedError()
-
-    def remove_profile_picture(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'accounts/remove_profile_picture/',
-            util.generate_signature(data)
-        )
-
-    def set_private_account(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'accounts/set_private/',
-            util.generate_signature(data)
-        )
-
-    def set_public_account(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'accounts/set_public/',
-            util.generate_signature(data)
-        )
-
-    def get_profile_data(self):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'accounts/current_user/?edit=true',
-            util.generate_signature(data)
-        )
-
-    def edit_profile(self, url, phone, first_name, biography, email, gender):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'external_url': url,
-            'phone_number': phone,
-            'username': self.username,
-            'full_name': first_name,
-            'biography': biography,
-            'email': email,
-            'gender': gender,
-        })
-        return self.__send_request(
-            'accounts/edit_profile/',
-            util.generate_signature(data)
-        )
-
-    def get_story(self, user_id):
-        return self.__send_request(
-            'feed/user/{}/reel_media/'.format(user_id)
-        )
-
-    def get_username_info(self, user_id):
-        return self.__send_request(
-            'users/{}/info/'.format(user_id)
-        )
-
-    def get_self_username_info(self):
-        return self.get_username_info(self.user_id)
-
-    def get_self_saved_media(self):
-        return self.__send_request(
-            'feed/saved'
-        )
-
-    def get_recent_activity(self):
-        return self.__send_request(
-            'news/inbox/'
-        )
-
-    def get_following_recent_activity(self):
-        return self.__send_request(
-            'news/'
-        )
-
-    def get_v2_inbox(self):
-        return self.__send_request(
-            'direct_v2/inbox/'
-        )
-
-    def get_v2_threads(self, thread, cursor=None):
-        endpoint = 'direct_v2/threads/{0}'.format(thread)
-        if cursor is not None:
-            endpoint += '?cursor={0}'.format(cursor)
-        return self.__send_request(endpoint)
-
-    def get_usertags(self, user_id):
-        return self.__send_request(
-            'usertags/{}/feed/'
-            '?rank_token={}'
-            '&ranked_content=true'.format(
-                user_id,
-                self.rank_token
-            )
-        )
-
-    def get_self_usertags(self):
-        return self.get_usertags(self.user_id)
-
-    def tag_feed(self, tag):
-        return self.__send_request(
-            'feed/tag/{}/'
-            '?rank_token={}'
-            '&ranked_content=true'.format(
-                tag,
-                self.rank_token
-            )
-        )
-
-    def get_media_likers(self, media_id):
-        return self.__send_request(
-            'media/{}/likers/'.format(media_id)
-        )
-
-    def get_geo_media(self, user_id):
-        return self.__send_request(
-            'maps/user/{}/'.format(user_id)
-        )
-
-    def get_self_geo_media(self):
-        return self.get_geo_media(self.user_id)
-
-    def fb_user_search(self, query):
-        return self.__send_request(
-            'fbsearch/topsearch/'
-            '?context=blended'
-            '&query={}'
-            '&rank_token={}'.format(
-                query,
-                self.rank_token
-            )
-        )
-
-    def search_users(self, query):
-        return self.__send_request(
-            'users/search/'
-            '?ig_sig_key_version={}'
-            '&is_typeahead=true'
-            '&query={}'
-            '&rank_token={}'.format(
-                constant.SIG_KEY_VERSION,
-                query,
-                self.rank_token
-            )
-        )
-
-    def search_username(self, username):
-        return self.__send_request(
-            'users/{}/usernameinfo/'.format(username)
-        )
-
-    def sync_from_address_book(self, contacts):
-        return self.__send_request(
-            'address_book/link/?include=extra_display_name,thumbnails',
-            "contacts={}".format(
-                json.dumps(contacts)
-            )
-        )
-
-    def search_tags(self, query):
-        return self.__send_request(
-            'tags/search/'
-            '?is_typeahead=true'
-            '&q={}'
-            '&rank_token={}'.format(
-                query,
-                self.rank_token
-            )
-        )
-
-    def get_timeline(self):
-        return self.__send_request(
-            'feed/timeline/'
-            '?rank_token={}'
-            '&ranked_content=true'.format(
-                self.rank_token
-            )
-        )
-
-    def get_user_feed(self, user_id, maxid='', min_timestamp=None):
-        return self.__send_request(
-            'feed/user/{}/'
-            '?max_id={}'
-            '&min_timestamp={}'
-            '&rank_token={}'
-            '&ranked_content=true'.format(
-                user_id,
-                maxid,
-                min_timestamp,
-                self.rank_token
-            )
-        )
-
-    def get_self_user_feed(self, maxid='', min_timestamp=None):
-        return self.get_user_feed(self.user_id, maxid, min_timestamp)
-
-    def get_hashtag_feed(self, hashtag_string, maxid=''):
-        return self.__send_request(
-            'feed/tag/{}/'
-            '?max_id={}'
-            '&rank_token={}'
-            '&ranked_content=true'.format(
-                hashtag_string,
-                maxid,
-                self.rank_token
-            )
-        )
-
-    def search_location(self, query):
-        return self.__send_request(
-            'fbsearch/places/'
-            '?rank_token={}'
-            '&query={}'.format(
-                self.rank_token,
-                query
-            )
-        )
-
-    def get_location_feed(self, location_id, maxid=''):
-        return self.__send_request(
-            'feed/location/{}/'
-            '?max_id={}'
-            '&rank_token={}'
-            '&ranked_content=true'.format(
-                location_id,
-                maxid,
-                self.rank_token
-            )
-        )
-
-    def get_popular_feed(self):
-        return self.__send_request(
-            'feed/popular/'
-            '?people_teaser_supported=1'
-            '&rank_token={}'
-            '&ranked_content=true'.format(
-                self.rank_token
-            )
-        )
-
-    def get_user_followings(self, user_id, maxid=''):
-        url = 'friendships/{}/following/?'.format(self.user_id)
-        query_string = {
-            'ig_sig_key_version': constant.SIG_KEY_VERSION,
-            'rank_token': self.rank_token,
-        }
-        if maxid:
-            query_string['max_id'] = maxid
-        url += urllib.parse.urlencode(query_string)
-        return self.__send_request(url)
-
-    def get_self_user_followings(self):
-        return self.get_user_followings(self.user_id)
-
-    def get_user_followers(self, user_id, maxid=''):
-        if maxid == '':
-            return self.__send_request(
-                'friendships/{}/followers/'
-                '?rank_token={}'.format(
-                    user_id,
-                    self.rank_token
-                )
-            )
-        else:
-            return self.__send_request(
-                'friendships/{}/followers/'
-                '?rank_token={}'
-                '&max_id={}'.format(
-                    user_id,
-                    self.rank_token,
-                    maxid
-                )
-            )
-
-    def get_self_user_followers(self):
-        return self.get_user_followers(self.user_id)
-
-    def get_pending_follow_requests(self):
-        return self.__send_request(
-            'friendships/pending'
-        )
-
-    def like(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/like/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def unlike(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/unlike/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def save(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/save/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def unsave(self, media_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            '_csrftoken': self.token,
-            'media_id': media_id,
-        })
-        return self.__send_request(
-            'media/{}/unsave/'.format(media_id),
-            util.generate_signature(data)
-        )
-
-    def get_media_comments(self, media_id, max_id=''):
-        return self.__send_request(
-            'media/{}/comments/'
-            '?max_id={}'.format(
-                media_id,
-                max_id
-            )
-        )
-
-    def set_name_and_phone(self, name='', phone=''):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'first_name': name,
-            'phone_number': phone,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'accounts/set_phone_and_name/',
-            util.generate_signature(data)
-        )
-
-    def get_direct_share(self):
-        return self.__send_request(
-            'direct_share/inbox/'
-        )
-
-    def backup(self):
-        # TODO Instagram.php 1470-1485
-        raise NotImplementedError()
-
-    def approve(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/approve/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def ignore(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/ignore/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def follow(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/create/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def unfollow(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/destroy/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def block(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/block/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def unblock(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/unblock/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def user_friendship(self, user_id):
-        data = json.dumps({
-            '_uuid': self.uuid,
-            '_uid': self.user_id,
-            'user_id': user_id,
-            '_csrftoken': self.token,
-        })
-        return self.__send_request(
-            'friendships/show/{}/'.format(user_id),
-            util.generate_signature(data)
-        )
-
-    def get_liked_media(self, maxid=''):
-        return self.__send_request(
-            'feed/liked/'
-            '?max_id={}'.format(
-                maxid
-            )
-        )
-
+    @endpoint('live/create/')
     def create_broadcast(self, preview_width=1080, preview_height=1920, broadcast_message=''):
         data = json.dumps({
             '_uuid': self.uuid,
@@ -1220,6 +1209,7 @@ class InstagramAPI(object):
             util.generate_signature(data)
         )
 
+    @endpoint('live/{}/start')
     def start_broadcast(self, broadcast_id, send_notification=False):
         data = json.dumps({
             '_uuid': self.uuid,
@@ -1232,6 +1222,7 @@ class InstagramAPI(object):
             util.generate_signature(data)
         )
 
+    @endpoint('live/{}/end_broadcast/')
     def stop_broadcast(self, broadcast_id):
         data = json.dumps({
             '_uuid': self.uuid,
@@ -1243,6 +1234,7 @@ class InstagramAPI(object):
             util.generate_signature(data)
         )
 
+    @endpoint('live/{}/add_to_post_live/')
     def add_broadcast_to_live(self, broadcast_id):
         # broadcast has to be ended first!
         data = json.dumps({
@@ -1255,22 +1247,139 @@ class InstagramAPI(object):
             util.generate_signature(data)
         )
 
-    def build_body(self, bodies, boundary):
-        body = u''
-        for b in bodies:
-            body += u'--{boundary}\r\n'.format(boundary=boundary)
-            body += u'Content-Disposition: {b_type}; name="{b_name}"'.format(b_type=b['type'], b_name=b['name'])
-            _filename = b.get('filename', None)
-            _headers = b.get('headers', None)
-            if _filename:
-                _filename, ext = os.path.splitext(_filename)
-                body += u'; filename="pending_media_{uid}.{ext}"'.format(uid=util.generate_upload_id(), ext=ext)
-            if _headers and isinstance(_headers, list):
-                for h in _headers:
-                    body += u'\r\n{header}'.format(header=h)
-            body += u'\r\n\r\n{data}\r\n'.format(data=b['data'])
-        body += u'--{boundary}--'.format(boundary=boundary)
-        return body
+    # --- misc ---
+
+    @endpoint('/qe/sync/')
+    def sync_features(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'id': self.user_id,
+            '_csrftoken': self.token,
+            'experiments': constant.EXPERIMENTS,
+        })
+        return self.__send_request(
+            'qe/sync/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('qe/expose/')
+    def expose(self):
+        data = json.dumps({
+            '_uuid': self.uuid,
+            '_uid': self.user_id,
+            'id': self.user_id,
+            '_csrftoken': self.token,
+            'experiment': 'ig_android_profile_contextual_feed',
+        })
+        return self.__send_request(
+            'qe/expose/',
+            util.generate_signature(data)
+        )
+
+    @endpoint('megaphone/log/')
+    def megaphone_log(self):
+        return self.__send_request(
+            'megaphone/log/'
+        )
+
+    @endpoint('discover/explore/')
+    def explore(self):
+        return self.__send_request(
+            'discover/explore/'
+        )
+
+    @endpoint('news/inbox/')
+    def get_recent_activity(self):
+        return self.__send_request(
+            'news/inbox/'
+        )
+
+    @endpoint('news/inbox/')
+    def get_following_recent_activity(self):
+        return self.__send_request(
+            'news/'
+        )
+
+    @endpoint('usertags/{}/feed/')
+    def get_usertags(self, user_id):
+        return self.__send_request(
+            'usertags/{}/feed/'
+            '?rank_token={}'
+            '&ranked_content=true'.format(
+                user_id,
+                self.rank_token
+            )
+        )
+
+    @endpoint('maps/user/{}/')
+    def get_geo_media(self, user_id):
+        return self.__send_request(
+            'maps/user/{}/'.format(user_id)
+        )
+
+    @endpoint('fbsearch/topsearch/')
+    def fb_user_search(self, query):
+        return self.__send_request(
+            'fbsearch/topsearch/'
+            '?context=blended'
+            '&query={}'
+            '&rank_token={}'.format(
+                query,
+                self.rank_token
+            )
+        )
+
+    @endpoint('address_book/link/?include=extra_display_name,thumbnails')
+    def sync_from_address_book(self, contacts):
+        return self.__send_request(
+            'address_book/link/?include=extra_display_name,thumbnails',
+            "contacts={}".format(
+                json.dumps(contacts)
+            )
+        )
+
+    @endpoint('tags/search/')
+    def search_tags(self, query):
+        return self.__send_request(
+            'tags/search/'
+            '?is_typeahead=true'
+            '&q={}'
+            '&rank_token={}'.format(
+                query,
+                self.rank_token
+            )
+        )
+
+    @endpoint('direct_share/inbox/')
+    def get_direct_share(self):
+        return self.__send_request(
+            'direct_share/inbox/'
+        )
+
+    def backup(self):
+        # TODO Instagram.php 1470-1485
+        raise NotImplementedError()
+
+    # --- shortcuts ---
+
+    def get_self_username_info(self):
+        return self.get_username_info(self.user_id)
+
+    def get_self_usertags(self):
+        return self.get_usertags(self.user_id)
+
+    def get_self_geo_media(self):
+        return self.get_geo_media(self.user_id)
+
+    def get_self_user_feed(self, maxid='', min_timestamp=None):
+        return self.get_user_feed(self.user_id, maxid, min_timestamp)
+
+    def get_self_user_followings(self):
+        return self.get_user_followings(self.user_id)
+
+    def get_self_user_followers(self):
+        return self.get_user_followers(self.user_id)
 
     def get_total_followers(self, user_id):
         followers = []
