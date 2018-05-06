@@ -39,7 +39,7 @@ class InstagramAPI:
         self.session = requests.Session()
 
         self.last_response = None
-        self.username_id = None
+        self.user_id = None
         self.rank_token = None
         self.token = None
         self.last_json = None
@@ -51,7 +51,7 @@ class InstagramAPI:
 
     def __generate_rank_token(self):
         return "{}_{}".format(
-            self.username_id,
+            self.user_id,
             self.uuid
         )
 
@@ -99,7 +99,7 @@ class InstagramAPI:
                         True
                 ):
                     self.is_logged_in = True
-                    self.username_id = self.last_json["logged_in_user"]["pk"]
+                    self.user_id = self.last_json["logged_in_user"]["pk"]
                     self.rank_token = self.__generate_rank_token()
                     self.token = self.last_response.cookies["csrftoken"]
 
@@ -114,8 +114,8 @@ class InstagramAPI:
     def sync_features(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
-            'id': self.username_id,
+            '_uid': self.user_id,
+            'id': self.user_id,
             '_csrftoken': self.token,
             'experiments': constant.EXPERIMENTS,
         })
@@ -142,8 +142,8 @@ class InstagramAPI:
     def expose(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
-            'id': self.username_id,
+            '_uid': self.user_id,
+            'id': self.user_id,
             '_csrftoken': self.token,
             'experiment': 'ig_android_profile_contextual_feed',
         })
@@ -425,7 +425,7 @@ class InstagramAPI:
         # Build the request...
         data = {
             '_csrftoken': self.token,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_uuid': self.uuid,
             'client_sidecar_id': album_upload_id,
             'caption': caption_text,
@@ -592,7 +592,7 @@ class InstagramAPI:
             'device': constant.DEVICE_SETTINTS,
             '_csrftoken': self.token,
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'caption': caption,
         })
         return self.send_request(
@@ -606,7 +606,7 @@ class InstagramAPI:
             '_csrftoken': self.token,
             'media_folder': 'Instagram',
             'source_type': 4,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_uuid': self.uuid,
             'caption': caption,
             'upload_id': upload_id,
@@ -629,7 +629,7 @@ class InstagramAPI:
     def edit_media(self, media_id, caption_text=''):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'caption_text': caption_text,
         })
@@ -641,7 +641,7 @@ class InstagramAPI:
     def remove_self_tag(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -652,7 +652,7 @@ class InstagramAPI:
     def media_info(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_id': media_id,
         })
@@ -664,7 +664,7 @@ class InstagramAPI:
     def delete_media(self, media_id, media_type=1):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_type': media_type,
             'media_id': media_id,
@@ -677,7 +677,7 @@ class InstagramAPI:
     def change_password(self, new_password):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'old_password': self.password,
             'new_password1': new_password,
@@ -696,7 +696,7 @@ class InstagramAPI:
     def comment(self, media_id, comment_text):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'comment_text': comment_text,
         })
@@ -708,7 +708,7 @@ class InstagramAPI:
     def delete_comment(self, media_id, comment_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -723,7 +723,7 @@ class InstagramAPI:
     def remove_profile_picture(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -734,7 +734,7 @@ class InstagramAPI:
     def set_private_account(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -745,7 +745,7 @@ class InstagramAPI:
     def set_public_account(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -756,7 +756,7 @@ class InstagramAPI:
     def get_profile_data(self):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -767,7 +767,7 @@ class InstagramAPI:
     def edit_profile(self, url, phone, first_name, biography, email, gender):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'external_url': url,
             'phone_number': phone,
@@ -782,18 +782,18 @@ class InstagramAPI:
             util.generate_signature(data)
         )
 
-    def get_story(self, username_id):
+    def get_story(self, user_id):
         return self.send_request(
-            'feed/user/{}/reel_media/'.format(username_id)
+            'feed/user/{}/reel_media/'.format(user_id)
         )
 
-    def get_username_info(self, username_id):
+    def get_username_info(self, user_id):
         return self.send_request(
-            'users/{}/info/'.format(username_id)
+            'users/{}/info/'.format(user_id)
         )
 
     def get_self_username_info(self):
-        return self.get_username_info(self.username_id)
+        return self.get_username_info(self.user_id)
 
     def get_self_saved_media(self):
         return self.send_request(
@@ -821,18 +821,18 @@ class InstagramAPI:
             endpoint += '?cursor={0}'.format(cursor)
         return self.send_request(endpoint)
 
-    def get_usertags(self, username_id):
+    def get_usertags(self, user_id):
         return self.send_request(
             'usertags/{}/feed/'
             '?rank_token={}'
             '&ranked_content=true'.format(
-                username_id,
+                user_id,
                 self.rank_token
             )
         )
 
     def get_self_usertags(self):
-        return self.get_usertags(self.username_id)
+        return self.get_usertags(self.user_id)
 
     def tag_feed(self, tag):
         return self.send_request(
@@ -849,13 +849,13 @@ class InstagramAPI:
             'media/{}/likers/'.format(media_id)
         )
 
-    def get_geo_media(self, username_id):
+    def get_geo_media(self, user_id):
         return self.send_request(
-            'maps/user/{}/'.format(username_id)
+            'maps/user/{}/'.format(user_id)
         )
 
     def get_self_geo_media(self):
-        return self.get_geo_media(self.username_id)
+        return self.get_geo_media(self.user_id)
 
     def fb_user_search(self, query):
         return self.send_request(
@@ -881,9 +881,9 @@ class InstagramAPI:
             )
         )
 
-    def search_username(self, username_name):
+    def search_username(self, username):
         return self.send_request(
-            'users/{}/usernameinfo/'.format(username_name)
+            'users/{}/usernameinfo/'.format(username)
         )
 
     def sync_from_address_book(self, contacts):
@@ -914,14 +914,14 @@ class InstagramAPI:
             )
         )
 
-    def get_user_feed(self, username_id, maxid='', min_timestamp=None):
+    def get_user_feed(self, user_id, maxid='', min_timestamp=None):
         return self.send_request(
             'feed/user/{}/'
             '?max_id={}'
             '&min_timestamp={}'
             '&rank_token={}'
             '&ranked_content=true'.format(
-                username_id,
+                user_id,
                 maxid,
                 min_timestamp,
                 self.rank_token
@@ -929,7 +929,7 @@ class InstagramAPI:
         )
 
     def get_self_user_feed(self, maxid='', min_timestamp=None):
-        return self.get_user_feed(self.username_id, maxid, min_timestamp)
+        return self.get_user_feed(self.user_id, maxid, min_timestamp)
 
     def get_hashtag_feed(self, hashtag_string, maxid=''):
         return self.send_request(
@@ -975,8 +975,8 @@ class InstagramAPI:
             )
         )
 
-    def get_user_followings(self, username_id, maxid=''):
-        url = 'friendships/{}/following/?'.format(self.username_id)
+    def get_user_followings(self, user_id, maxid=''):
+        url = 'friendships/{}/following/?'.format(self.user_id)
         query_string = {
             'ig_sig_key_version': constant.SIG_KEY_VERSION,
             'rank_token': self.rank_token,
@@ -987,14 +987,14 @@ class InstagramAPI:
         return self.send_request(url)
 
     def get_self_user_followings(self):
-        return self.get_user_followings(self.username_id)
+        return self.get_user_followings(self.user_id)
 
-    def get_user_followers(self, username_id, maxid=''):
+    def get_user_followers(self, user_id, maxid=''):
         if maxid == '':
             return self.send_request(
                 'friendships/{}/followers/'
                 '?rank_token={}'.format(
-                    username_id,
+                    user_id,
                     self.rank_token
                 )
             )
@@ -1003,14 +1003,14 @@ class InstagramAPI:
                 'friendships/{}/followers/'
                 '?rank_token={}'
                 '&max_id={}'.format(
-                    username_id,
+                    user_id,
                     self.rank_token,
                     maxid
                 )
             )
 
     def get_self_user_followers(self):
-        return self.get_user_followers(self.username_id)
+        return self.get_user_followers(self.user_id)
 
     def get_pending_follow_requests(self):
         return self.send_request(
@@ -1020,7 +1020,7 @@ class InstagramAPI:
     def like(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_id': media_id,
         })
@@ -1032,7 +1032,7 @@ class InstagramAPI:
     def unlike(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_id': media_id,
         })
@@ -1044,7 +1044,7 @@ class InstagramAPI:
     def save(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_id': media_id,
         })
@@ -1056,7 +1056,7 @@ class InstagramAPI:
     def unsave(self, media_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
             'media_id': media_id,
         })
@@ -1077,7 +1077,7 @@ class InstagramAPI:
     def set_name_and_phone(self, name='', phone=''):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'first_name': name,
             'phone_number': phone,
             '_csrftoken': self.token,
@@ -1099,7 +1099,7 @@ class InstagramAPI:
     def approve(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1111,7 +1111,7 @@ class InstagramAPI:
     def ignore(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1123,7 +1123,7 @@ class InstagramAPI:
     def follow(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1135,7 +1135,7 @@ class InstagramAPI:
     def unfollow(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1147,7 +1147,7 @@ class InstagramAPI:
     def block(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1159,7 +1159,7 @@ class InstagramAPI:
     def unblock(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1171,7 +1171,7 @@ class InstagramAPI:
     def user_friendship(self, user_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'user_id': user_id,
             '_csrftoken': self.token,
         })
@@ -1191,7 +1191,7 @@ class InstagramAPI:
     def create_broadcast(self, preview_width=1080, preview_height=1920, broadcast_message=''):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'preview_height': preview_height,
             'preview_width': preview_width,
             'broadcast_message': broadcast_message,
@@ -1207,7 +1207,7 @@ class InstagramAPI:
     def start_broadcast(self, broadcast_id, send_notification=False):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             'should_send_notifications': int(send_notification),
             '_csrftoken': self.token,
         })
@@ -1219,7 +1219,7 @@ class InstagramAPI:
     def stop_broadcast(self, broadcast_id):
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -1231,7 +1231,7 @@ class InstagramAPI:
         # broadcast has to be ended first!
         data = json.dumps({
             '_uuid': self.uuid,
-            '_uid': self.username_id,
+            '_uid': self.user_id,
             '_csrftoken': self.token,
         })
         return self.send_request(
@@ -1308,11 +1308,11 @@ class InstagramAPI:
                 pass
             return False
 
-    def get_total_followers(self, username_id):
+    def get_total_followers(self, user_id):
         followers = []
         next_max_id = ''
         while 1:
-            self.get_user_followers(username_id, next_max_id)
+            self.get_user_followers(user_id, next_max_id)
             temp = self.last_json
 
             for item in temp["users"]:
@@ -1322,11 +1322,11 @@ class InstagramAPI:
                 return followers
             next_max_id = temp["next_max_id"]
 
-    def get_total_followings(self, username_id):
+    def get_total_followings(self, user_id):
         followers = []
         next_max_id = ''
         while True:
-            self.get_user_followings(username_id, next_max_id)
+            self.get_user_followings(user_id, next_max_id)
             temp = self.last_json
 
             for item in temp["users"]:
@@ -1336,11 +1336,11 @@ class InstagramAPI:
                 return followers
             next_max_id = temp["next_max_id"]
 
-    def get_total_user_feed(self, username_id, min_timestamp=None):
+    def get_total_user_feed(self, user_id, min_timestamp=None):
         user_feed = []
         next_max_id = ''
         while True:
-            self.get_user_feed(username_id, next_max_id, min_timestamp)
+            self.get_user_feed(user_id, next_max_id, min_timestamp)
             temp = self.last_json
             for item in temp["items"]:
                 user_feed.append(item)
@@ -1349,13 +1349,13 @@ class InstagramAPI:
             next_max_id = temp["next_max_id"]
 
     def get_total_self_user_feed(self, min_timestamp=None):
-        return self.get_total_user_feed(self.username_id, min_timestamp)
+        return self.get_total_user_feed(self.user_id, min_timestamp)
 
     def get_total_self_followers(self):
-        return self.get_total_followers(self.username_id)
+        return self.get_total_followers(self.user_id)
 
     def get_total_self_followings(self):
-        return self.get_total_followings(self.username_id)
+        return self.get_total_followings(self.user_id)
 
     def get_total_liked_media(self, scan_rate=1):
         next_id = ''
