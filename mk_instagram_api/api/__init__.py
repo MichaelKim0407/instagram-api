@@ -435,7 +435,7 @@ class InstagramAPI:
             self.s.proxies.update(proxies)
 
     def login(self, force=False):
-        if (not self.is_logged_in or force):
+        if not self.is_logged_in or force:
             if (
                     self.send_request('si/fetch_headers/?challenge_type=signup&guid=' + self.generate_uuid(False), None,
                                       True)):
@@ -448,7 +448,7 @@ class InstagramAPI:
                         'password': self.password,
                         'login_attempt_count': '0'}
 
-                if (self.send_request('accounts/login/', self.generate_signature(json.dumps(data)), True)):
+                if self.send_request('accounts/login/', self.generate_signature(json.dumps(data)), True):
                     self.is_logged_in = True
                     self.username_id = self.last_json["logged_in_user"]["pk"]
                     self.rank_token = "%s_%s" % (self.username_id, self.uuid)
@@ -1256,7 +1256,7 @@ class InstagramAPI:
 
     def generate_uuid(self, type):
         generated_uuid = str(uuid.uuid4())
-        if (type):
+        if type:
             return generated_uuid
         else:
             return generated_uuid.replace('-', '')
@@ -1315,7 +1315,7 @@ class InstagramAPI:
     def send_request(self, endpoint, post=None, login=False):
         verify = False  # don't show request warning
 
-        if (not self.is_logged_in and not login):
+        if not self.is_logged_in and not login:
             raise Exception("Not logged in!\n")
 
         self.s.headers.update({'Connection': 'close',
@@ -1327,7 +1327,7 @@ class InstagramAPI:
 
         while True:
             try:
-                if (post is not None):
+                if post is not None:
                     response = self.s.post(self.API_URL + endpoint, data=post, verify=verify)
                 else:
                     response = self.s.get(self.API_URL + endpoint, verify=verify)
