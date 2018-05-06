@@ -193,6 +193,7 @@ class InstagramAPI(object):
         )
 
     def logout(self):
+        self.is_logged_in = False
         return self.__send_request(
             'accounts/logout/'
         )
