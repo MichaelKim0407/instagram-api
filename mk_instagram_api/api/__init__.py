@@ -277,20 +277,20 @@ class InstagramAPI(object):
         )
 
     @endpoint('friendships/{}/following/')
-    def get_user_followings(self, user_id, maxid=''):
-        url = 'friendships/{}/following/?'.format(self.user_id)
+    def get_user_followings(self, user_id, max_id=''):
+        url = 'friendships/{}/following/?'.format(user_id)
         query_string = {
             'ig_sig_key_version': constant.SIG_KEY_VERSION,
             'rank_token': self.rank_token,
         }
-        if maxid:
-            query_string['max_id'] = maxid
+        if max_id:
+            query_string['max_id'] = max_id
         url += urllib.parse.urlencode(query_string)
         return self.__send_request(url)
 
     @endpoint('friendships/{}/followers/')
-    def get_user_followers(self, user_id, maxid=''):
-        if maxid == '':
+    def get_user_followers(self, user_id, max_id=''):
+        if max_id == '':
             return self.__send_request(
                 'friendships/{}/followers/'
                 '?rank_token={}'.format(
@@ -305,7 +305,7 @@ class InstagramAPI(object):
                 '&max_id={}'.format(
                     user_id,
                     self.rank_token,
-                    maxid
+                    max_id
                 )
             )
 
@@ -476,7 +476,7 @@ class InstagramAPI(object):
         )
 
     @endpoint('feed/user/{}/')
-    def get_user_feed(self, user_id, maxid='', min_timestamp=None):
+    def get_user_feed(self, user_id, max_id='', min_timestamp=None):
         return self.__send_request(
             'feed/user/{}/'
             '?max_id={}'
@@ -484,21 +484,21 @@ class InstagramAPI(object):
             '&rank_token={}'
             '&ranked_content=true'.format(
                 user_id,
-                maxid,
+                max_id,
                 min_timestamp,
                 self.rank_token
             )
         )
 
     @endpoint('feed/tag/{}/')
-    def get_hashtag_feed(self, hashtag_string, maxid=''):
+    def get_hashtag_feed(self, hashtag_string, max_id=''):
         return self.__send_request(
             'feed/tag/{}/'
             '?max_id={}'
             '&rank_token={}'
             '&ranked_content=true'.format(
                 hashtag_string,
-                maxid,
+                max_id,
                 self.rank_token
             )
         )
@@ -515,14 +515,14 @@ class InstagramAPI(object):
         )
 
     @endpoint('feed/location/{}/')
-    def get_location_feed(self, location_id, maxid=''):
+    def get_location_feed(self, location_id, max_id=''):
         return self.__send_request(
             'feed/location/{}/'
             '?max_id={}'
             '&rank_token={}'
             '&ranked_content=true'.format(
                 location_id,
-                maxid,
+                max_id,
                 self.rank_token
             )
         )
@@ -539,11 +539,11 @@ class InstagramAPI(object):
         )
 
     @endpoint('feed/liked/')
-    def get_liked_media(self, maxid=''):
+    def get_liked_media(self, max_id=''):
         return self.__send_request(
             'feed/liked/'
             '?max_id={}'.format(
-                maxid
+                max_id
             )
         )
 
@@ -1372,8 +1372,8 @@ class InstagramAPI(object):
     def get_self_geo_media(self):
         return self.get_geo_media(self.user_id)
 
-    def get_self_user_feed(self, maxid='', min_timestamp=None):
-        return self.get_user_feed(self.user_id, maxid, min_timestamp)
+    def get_self_user_feed(self, max_id='', min_timestamp=None):
+        return self.get_user_feed(self.user_id, max_id, min_timestamp)
 
     def get_self_user_followings(self):
         return self.get_user_followings(self.user_id)
