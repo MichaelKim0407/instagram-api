@@ -653,13 +653,13 @@ class InstagramAPI:
                             correct = False
                         if y < 0.0 or y > 1.0:
                             correct = False
-                    except:
+                    except Exception:
                         correct = False
                 try:
                     user_id = long(user_id)
                     if user_id < 0:
                         correct = False
-                except:
+                except Exception:
                     correct = False
             if not correct:
                 raise Exception('Invalid user entry in usertags array.')
@@ -736,7 +736,7 @@ class InstagramAPI:
             try:
                 self.last_response = response
                 self.last_json = json.loads(response.text)
-            except:
+            except Exception:
                 pass
             return False
 
@@ -792,7 +792,7 @@ class InstagramAPI:
             try:
                 self.last_response = response
                 self.last_json = json.loads(response.text)
-            except:
+            except Exception:
                 pass
             return False
 
@@ -849,7 +849,7 @@ class InstagramAPI:
             try:
                 self.last_response = response
                 self.last_json = json.loads(response.text)
-            except:
+            except Exception:
                 pass
             return False
 
@@ -1351,7 +1351,7 @@ class InstagramAPI:
                     raise SentryBlockException(self.last_json['message'])
             except SentryBlockException:
                 raise
-            except:
+            except Exception:
                 pass
             return False
 
