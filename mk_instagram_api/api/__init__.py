@@ -852,7 +852,7 @@ class InstagramAPI(object):
             if not correct:
                 raise Exception('Invalid user entry in usertags array.')
 
-    def upload_album(self, media, caption=None, upload_id=None):
+    def upload_album(self, media, caption=None):
         if not media:
             raise AlbumSizeError(0)
 
@@ -890,7 +890,6 @@ class InstagramAPI(object):
 
         # Perform all media file uploads.
         for idx, item in enumerate(media):
-            item_internal_metadata = item['internalMetadata']
             item_upload_id = util.generate_upload_id()
             if item.get('type', '') == 'photo':
                 self.upload_photo(
@@ -916,8 +915,7 @@ class InstagramAPI(object):
                 pass
             item['internalMetadata']['upload_id'] = item_upload_id
 
-        album_internal_metadata = {}
-        return self.configure_album(media, album_internal_metadata, caption_text=caption)
+        return self.configure_album(media, caption_text=caption)
 
     # --- configure ---
 
@@ -981,7 +979,7 @@ class InstagramAPI(object):
         )
 
     @endpoint('media/configure_sidecar/')
-    def configure_album(self, media, album_internal_metadata, caption_text='', location=None):
+    def configure_album(self, media, caption_text=''):
         endpoint = 'media/configure_sidecar/'
         album_upload_id = util.generate_upload_id()
 
@@ -1432,10 +1430,7 @@ class InstagramAPI(object):
         liked_items = []
         for x in range(0, scan_rate):
             temp = self.get_liked_media(next_id)
-            try:
-                next_id = temp["next_max_id"]
-                for item in temp["items"]:
-                    liked_items.append(item)
-            except KeyError as e:
-                break
+            next_id = temp["next_max_id"]
+            for item in temp["items"]:
+                liked_items.append(item)
         return liked_items
