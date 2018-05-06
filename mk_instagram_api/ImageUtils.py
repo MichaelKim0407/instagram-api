@@ -1,5 +1,5 @@
-import struct
 import imghdr
+import struct
 
 
 def getImageSize(fname):
