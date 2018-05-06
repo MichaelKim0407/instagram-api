@@ -411,15 +411,17 @@ class InstagramAPI:
         m = hashlib.md5()
         m.update(username.encode('utf-8') + password.encode('utf-8'))
         self.device_id = self.generate_device_id(m.hexdigest())
-        self.set_user(username, password)
-        self.is_logged_in = False
-        self.last_response = None
-        self.s = requests.Session()
-
-    def set_user(self, username, password):
         self.username = username
         self.password = password
         self.uuid = self.generate_uuid(True)
+        self.is_logged_in = False
+        self.s = requests.Session()
+
+        self.last_response = None
+        self.username_id = None
+        self.rank_token = None
+        self.token = None
+        self.last_json = None
 
     def set_proxy(self, proxy=None):
         """
