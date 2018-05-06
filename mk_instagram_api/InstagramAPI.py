@@ -10,32 +10,26 @@ import copy
 import hashlib
 import hmac
 import json
+import logging
 import os
 import requests
 import urllib
+import urllib.parse
 import uuid
 from datetime import datetime
-# Turn off InsecureRequestWarning
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests_toolbelt import MultipartEncoder
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+from .ImageUtils import getImageSize
+from .exceptions import SentryBlockException
 
 try:
     from moviepy.editor import VideoFileClip
 except ImportError:
-    print("Fail to import moviepy. Need only for Video upload.")
+    logging.warning("Fail to import moviepy. Need only for Video upload.")
 
-# The urllib library was split into other modules from Python 2 to Python 3
-if sys.version_info.major == 3:
-    import urllib.parse
-try:
-    from ImageUtils import getImageSize
-except:
-    # Issue 159, python3 import fix
-    from .ImageUtils import getImageSize
-
-from .exceptions import SentryBlockException
+# Turn off InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class InstagramAPI:
