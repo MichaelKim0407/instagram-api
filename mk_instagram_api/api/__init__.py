@@ -42,7 +42,6 @@ class InstagramAPI(object):
         self.user_id = None
         self.rank_token = None
         self.token = None
-        self.last_json = None
 
     def __generate_device_id(self):
         return util.generate_device_id(
@@ -55,7 +54,19 @@ class InstagramAPI(object):
             self.uuid
         )
 
-    def __send_request(self, endpoint, post=None, login=False):
+    def __handle_response(self, response):
+        if response.status_code == 200:
+            self.last_response = response
+            return json.loads(response.text)
+
+        # check for sentry block
+        result = json.loads(response.text)
+        if 'error_type' in result and result['error_type'] == 'sentry_block':
+            raise SentryBlockException(result['message'])
+
+        raise ResponseError(response.status_code, response)
+
+    def __send_request(self, endpoint, data=None, login=False):
         verify = False  # don't show request warning
 
         if not self.is_logged_in and not login:
@@ -70,42 +81,19 @@ class InstagramAPI(object):
             'User-Agent': constant.USER_AGENT,
         })
 
-        while True:
-            try:
-                if post is not None:
-                    response = self.session.post(
-                        constant.API_URL + endpoint,
-                        data=post,
-                        verify=verify
-                    )
-                else:
-                    response = self.session.get(
-                        constant.API_URL + endpoint,
-                        verify=verify
-                    )
-                break
-            except Exception as e:
-                logger.error('Except on SendRequest (wait 60 sec and resend): {}'.format(e))
-                time.sleep(60)
-
-        if response.status_code == 200:
-            self.last_response = response
-            self.last_json = json.loads(response.text)
-            return True
+        if data is not None:
+            response = self.session.post(
+                constant.API_URL + endpoint,
+                data=data,
+                verify=verify
+            )
         else:
-            logger.error("Request return {} error!".format(response.status_code))
-            # for debugging
-            try:
-                self.last_response = response
-                self.last_json = json.loads(response.text)
-                logger.debug(self.last_json)
-                if 'error_type' in self.last_json and self.last_json['error_type'] == 'sentry_block':
-                    raise SentryBlockException(self.last_json['message'])
-            except SentryBlockException:
-                raise
-            except Exception:
-                pass
-            return False
+            response = self.session.get(
+                constant.API_URL + endpoint,
+                verify=verify
+            )
+
+        return self.__handle_response(response)
 
     def set_proxy(self, proxy=None):
         """
@@ -113,7 +101,6 @@ class InstagramAPI(object):
 
         Proxy format - user:password@ip:port
         """
-
         if proxy is not None:
             logger.info('Set proxy!')
             proxies = {
@@ -123,45 +110,46 @@ class InstagramAPI(object):
             self.session.proxies.update(proxies)
 
     def login(self, force=False):
-        if not self.is_logged_in or force:
-            guid = util.generate_uuid(False)
-            if self.__send_request(
-                    'si/fetch_headers/'
-                    '?challenge_type=signup'
-                    '&guid={}'.format(
-                        guid
-                    ),
-                    None,
-                    True
-            ):
+        if self.is_logged_in and not force:
+            return
 
-                data = {
-                    'phone_id': util.generate_uuid(),
-                    '_csrftoken': self.last_response.cookies['csrftoken'],
-                    'username': self.username,
-                    'guid': self.uuid,
-                    'device_id': self.device_id,
-                    'password': self.password,
-                    'login_attempt_count': '0',
-                }
+        guid = util.generate_uuid(False)
+        self.__send_request(
+            'si/fetch_headers/'
+            '?challenge_type=signup'
+            '&guid={}'.format(
+                guid
+            ),
+            None,
+            True
+        )
 
-                if self.__send_request(
-                        'accounts/login/',
-                        util.generate_signature(json.dumps(data)),
-                        True
-                ):
-                    self.is_logged_in = True
-                    self.user_id = self.last_json["logged_in_user"]["pk"]
-                    self.rank_token = self.__generate_rank_token()
-                    self.token = self.last_response.cookies["csrftoken"]
+        data = {
+            'phone_id': util.generate_uuid(),
+            '_csrftoken': self.last_response.cookies['csrftoken'],
+            'username': self.username,
+            'guid': self.uuid,
+            'device_id': self.device_id,
+            'password': self.password,
+            'login_attempt_count': '0',
+        }
 
-                    self.sync_features()
-                    self.auto_complete_user_list()
-                    self.timeline_feed()
-                    self.get_v2_inbox()
-                    self.get_recent_activity()
-                    logger.info("Login success!")
-                    return True
+        result = self.__send_request(
+            'accounts/login/',
+            util.generate_signature(json.dumps(data)),
+            True
+        )
+        self.is_logged_in = True
+        self.user_id = result["logged_in_user"]["pk"]
+        self.rank_token = self.__generate_rank_token()
+        self.token = self.last_response.cookies["csrftoken"]
+
+        self.sync_features()
+        self.auto_complete_user_list()
+        self.timeline_feed()
+        self.get_v2_inbox()
+        self.get_recent_activity()
+        logger.info("Login success!")
 
     def sync_features(self):
         data = json.dumps({
@@ -241,10 +229,12 @@ class InstagramAPI(object):
             constant.API_URL + 'upload/photo/',
             data=m.to_string()
         )
-        if response.status_code == 200:
-            if self.configure(upload_id, photo, caption):
-                self.expose()
-        return False
+
+        if response.status_code != 200:
+            raise UploadFailed()
+
+        self.configure(upload_id, photo, caption)
+        self.expose()
 
     def upload_video(self, video, thumbnail, caption=None, upload_id=None, is_sidecar=None):
         if upload_id is None:
@@ -273,55 +263,62 @@ class InstagramAPI(object):
             constant.API_URL + 'upload/video/',
             data=m.to_string()
         )
-        if response.status_code == 200:
-            body = json.loads(response.text)
-            upload_url = body['video_upload_urls'][3]['url']
-            upload_job = body['video_upload_urls'][3]['job']
 
-            video_data = open(video, 'rb').read()
-            # solve issue #85 TypeError: slice indices must be integers or None or have an __index__ method
-            request_size = int(math.floor(len(video_data) / 4))
-            last_request_extra = (len(video_data) - (request_size * 3))
+        if response.status_code != 200:
+            raise UploadFailed()
 
-            headers = copy.deepcopy(self.session.headers)
+        body = json.loads(response.text)
+        upload_url = body['video_upload_urls'][3]['url']
+        upload_job = body['video_upload_urls'][3]['job']
+
+        video_data = open(video, 'rb').read()
+        # solve issue #85 TypeError: slice indices must be integers or None or have an __index__ method
+        request_size = int(math.floor(len(video_data) / 4))
+        last_request_extra = (len(video_data) - (request_size * 3))
+
+        headers = copy.deepcopy(self.session.headers)
+        self.session.headers.update({
+            'X-IG-Capabilities': '3Q4=',
+            'X-IG-Connection-Type': 'WIFI',
+            'Cookie2': '$Version=1',
+            'Accept-Language': 'en-US',
+            'Accept-Encoding': 'gzip, deflate',
+            'Content-type': 'application/octet-stream',
+            'Session-ID': upload_id,
+            'Connection': 'keep-alive',
+            'Content-Disposition': 'attachment; filename="video.mov"',
+            'job': upload_job,
+            'Host': 'upload.instagram.com',
+            'User-Agent': constant.USER_AGENT,
+        })
+        for i in range(0, 4):
+            start = i * request_size
+            if i == 3:
+                end = i * request_size + last_request_extra
+            else:
+                end = (i + 1) * request_size
+            length = last_request_extra if i == 3 else request_size
+            content_range = "bytes {start}-{end}/{lenVideo}".format(
+                start=start,
+                end=(end - 1),
+                lenVideo=len(video_data)
+            ).encode('utf-8')
+
             self.session.headers.update({
-                'X-IG-Capabilities': '3Q4=',
-                'X-IG-Connection-Type': 'WIFI',
-                'Cookie2': '$Version=1',
-                'Accept-Language': 'en-US',
-                'Accept-Encoding': 'gzip, deflate',
-                'Content-type': 'application/octet-stream',
-                'Session-ID': upload_id,
-                'Connection': 'keep-alive',
-                'Content-Disposition': 'attachment; filename="video.mov"',
-                'job': upload_job,
-                'Host': 'upload.instagram.com',
-                'User-Agent': constant.USER_AGENT,
+                'Content-Length': str(end - start),
+                'Content-Range': content_range,
             })
-            for i in range(0, 4):
-                start = i * request_size
-                if i == 3:
-                    end = i * request_size + last_request_extra
-                else:
-                    end = (i + 1) * request_size
-                length = last_request_extra if i == 3 else request_size
-                content_range = "bytes {start}-{end}/{lenVideo}".format(start=start, end=(end - 1),
-                                                                        lenVideo=len(video_data)).encode('utf-8')
+            response = self.session.post(
+                upload_url,
+                data=video_data[start:start + length]
+            )
+        self.session.headers = headers
 
-                self.session.headers.update({
-                    'Content-Length': str(end - start),
-                    'Content-Range': content_range,
-                })
-                response = self.session.post(
-                    upload_url,
-                    data=video_data[start:start + length]
-                )
-            self.session.headers = headers
+        if response.status_code != 200:
+            raise UploadFailed()
 
-            if response.status_code == 200:
-                if self.configure_video(upload_id, video, thumbnail, caption):
-                    self.expose()
-        return False
+        self.configure_video(upload_id, video, thumbnail, caption)
+        self.expose()
 
     def upload_album(self, media, caption=None, upload_id=None):
         if not media:
@@ -483,24 +480,10 @@ class InstagramAPI(object):
             'caption': caption_text,
             'children_metadata': children_metadata,
         }
-        self.__send_request(
+        return self.__send_request(
             endpoint,
             util.generate_signature(json.dumps(data))
         )
-        response = self.last_response
-        if response.status_code == 200:
-            self.last_response = response
-            self.last_json = json.loads(response.text)
-            return True
-        else:
-            logger.error("Request return {} error!".format(response.status_code))
-            # for debugging
-            try:
-                self.last_response = response
-                self.last_json = json.loads(response.text)
-            except Exception:
-                pass
-            return False
 
     def direct_message(self, text, recipients):
         if not isinstance(recipients, list):
@@ -547,17 +530,9 @@ class InstagramAPI(object):
 
         if response.status_code == 200:
             self.last_response = response
-            self.last_json = json.loads(response.text)
-            return True
-        else:
-            logger.error("Request return {} error!".format(response.status_code))
-            # for debugging
-            try:
-                self.last_response = response
-                self.last_json = json.loads(response.text)
-            except Exception:
-                pass
-            return False
+            return json.loads(response.text)
+
+        raise ResponseError(response.status_code, response)
 
     def direct_share(self, media_id, recipients, text=None):
         if not isinstance(position, list):  # FIXME
@@ -607,19 +582,7 @@ class InstagramAPI(object):
             data=data
         )
 
-        if response.status_code == 200:
-            self.last_response = response
-            self.last_json = json.loads(response.text)
-            return True
-        else:
-            logger.error("Request return {} error!".format(response.status_code))
-            # for debugging
-            try:
-                self.last_response = response
-                self.last_json = json.loads(response.text)
-            except Exception:
-                pass
-            return False
+        return self.__handle_response(response)
 
     def configure_video(self, upload_id, video, thumbnail, caption=''):
         clip = VideoFileClip(video)
@@ -770,7 +733,7 @@ class InstagramAPI(object):
 
     def change_profile_picture(self, photo):
         # TODO Instagram.php 705-775
-        return False
+        raise NotImplementedError()
 
     def remove_profile_picture(self):
         data = json.dumps({
@@ -1146,7 +1109,7 @@ class InstagramAPI(object):
 
     def backup(self):
         # TODO Instagram.php 1470-1485
-        return False
+        raise NotImplementedError()
 
     def approve(self, user_id):
         data = json.dumps({
@@ -1311,9 +1274,8 @@ class InstagramAPI(object):
     def get_total_followers(self, user_id):
         followers = []
         next_max_id = ''
-        while 1:
-            self.get_user_followers(user_id, next_max_id)
-            temp = self.last_json
+        while True:
+            temp = self.get_user_followers(user_id, next_max_id)
 
             for item in temp["users"]:
                 followers.append(item)
@@ -1326,8 +1288,7 @@ class InstagramAPI(object):
         followers = []
         next_max_id = ''
         while True:
-            self.get_user_followings(user_id, next_max_id)
-            temp = self.last_json
+            temp = self.get_user_followings(user_id, next_max_id)
 
             for item in temp["users"]:
                 followers.append(item)
@@ -1340,8 +1301,7 @@ class InstagramAPI(object):
         user_feed = []
         next_max_id = ''
         while True:
-            self.get_user_feed(user_id, next_max_id, min_timestamp)
-            temp = self.last_json
+            temp = self.get_user_feed(user_id, next_max_id, min_timestamp)
             for item in temp["items"]:
                 user_feed.append(item)
             if temp["more_available"] is False:
@@ -1362,7 +1322,6 @@ class InstagramAPI(object):
         liked_items = []
         for x in range(0, scan_rate):
             temp = self.get_liked_media(next_id)
-            temp = self.last_json
             try:
                 next_id = temp["next_max_id"]
                 for item in temp["items"]:

@@ -1,6 +1,15 @@
 __author__ = 'Michael'
 
 
+class ResponseError(Exception):
+    def __init__(self, status_code, response):
+        self.status_code = status_code
+        self.response = response
+        super().__init__(
+            'Request failed with code {}'.format(status_code)
+        )
+
+
 class SentryBlockException(Exception):
     pass
 
@@ -8,6 +17,10 @@ class SentryBlockException(Exception):
 class RequireLogin(Exception):
     def __init__(self):
         super().__init__('Not logged in!')
+
+
+class UploadFailed(Exception):
+    pass
 
 
 class AlbumSizeError(Exception):
