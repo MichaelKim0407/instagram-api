@@ -10,7 +10,7 @@ class ResponseError(Exception):
         )
 
 
-class SentryBlockException(Exception):
+class SentryBlockError(Exception):
     pass
 
 

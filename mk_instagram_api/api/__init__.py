@@ -62,7 +62,7 @@ class InstagramAPI(object):
         # check for sentry block
         result = json.loads(response.text)
         if 'error_type' in result and result['error_type'] == 'sentry_block':
-            raise SentryBlockException(result['message'])
+            raise SentryBlockError(result['message'])
 
         raise ResponseError(response.status_code, response)
 
