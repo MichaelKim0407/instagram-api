@@ -15,7 +15,7 @@ from requests_toolbelt import MultipartEncoder
 from . import constant
 from . import util
 from .ImageUtils import get_image_size
-from .exceptions import SentryBlockException
+from .exceptions import *
 
 try:
     from moviepy.editor import VideoFileClip
@@ -273,18 +273,17 @@ class InstagramAPI:
 
     def upload_album(self, media, caption=None, upload_id=None):
         if not media:
-            raise Exception("List of media to upload can't be empty.")
+            raise AlbumSizeError(0)
 
         if len(media) < 2 or len(media) > 10:
-            raise Exception(
-                'Instagram requires that albums contain 2-10 items. You tried to submit {}.'.format(len(media)))
+            raise AlbumSizeError(len(media))
 
         # Figure out the media file details for ALL media in the album.
         # NOTE: We do this first, since it validates whether the media files are
         # valid and lets us avoid wasting time uploading totally invalid albums!
         for idx, item in enumerate(media):
-            if not item.get('file', '') or item.get('tipe', ''):
-                raise Exception('Media at index "{}" does not have the required "file" and "type" keys.'.format(idx))
+            if not (item.get('file', '') or item.get('type', '')):
+                raise AlbumMediaContentError(idx)
 
             # $itemInternalMetadata = new InternalMetadata();
             # If usertags are provided, verify that the entries are valid.
@@ -303,7 +302,7 @@ class InstagramAPI:
                 pass
 
             else:
-                raise Exception('Unsupported album media type "{}".'.format(item['type']))
+                raise AlbumMediaTypeError(item['type'])
 
             item_internal_metadata = {}
             item['internalMetadata'] = item_internal_metadata
@@ -1261,7 +1260,7 @@ class InstagramAPI:
         verify = False  # don't show request warning
 
         if not self.is_logged_in and not login:
-            raise Exception("Not logged in!\n")
+            raise RequireLogin()
 
         self.session.headers.update({
             'Connection': 'close',
