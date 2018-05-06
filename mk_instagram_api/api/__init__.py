@@ -1,5 +1,4 @@
 ﻿import math
-import sys
 import time
 
 import calendar
@@ -656,7 +655,7 @@ class InstagramAPI:
                     except Exception:
                         correct = False
                 try:
-                    user_id = long(user_id)
+                    user_id = int(user_id)
                     if user_id < 0:
                         correct = False
                 except Exception:
@@ -797,7 +796,7 @@ class InstagramAPI:
             return False
 
     def direct_share(self, media_id, recipients, text=None):
-        if not isinstance(position, list):
+        if not isinstance(position, list):  # FIXME
             recipients = [str(recipients)]
         recipient_users = '"",""'.join(str(r) for r in recipients)
         endpoint = 'direct_v2/threads/broadcast/media_share/?media_type=photo'
@@ -1112,10 +1111,7 @@ class InstagramAPI:
                         'rank_token': self.rank_token}
         if maxid:
             query_string['max_id'] = maxid
-        if sys.version_info.major == 3:
-            url += urllib.parse.urlencode(query_string)
-        else:
-            url += urllib.urlencode(query_string)
+        url += urllib.parse.urlencode(query_string)
         return self.send_request(url)
 
     def get_self_user_followings(self):
@@ -1239,10 +1235,7 @@ class InstagramAPI:
 
     def generate_signature(self, data, skip_quote=False):
         if not skip_quote:
-            try:
-                parsed_data = urllib.parse.quote(data)
-            except AttributeError:
-                parsed_data = urllib.quote(data)
+            parsed_data = urllib.parse.quote(data)
         else:
             parsed_data = data
         return 'ig_sig_key_version=' + self.SIG_KEY_VERSION + '&signed_body=' + hmac.new(
@@ -1304,10 +1297,10 @@ class InstagramAPI:
             _headers = b.get('headers', None)
             if _filename:
                 _filename, ext = os.path.splitext(_filename)
-                _body += u'; filename="pending_media_{uid}.{ext}"'.format(uid=self.generate_upload_id(), ext=ext)
+                body += u'; filename="pending_media_{uid}.{ext}"'.format(uid=self.generate_upload_id(), ext=ext)
             if _headers and isinstance(_headers, list):
                 for h in _headers:
-                    _body += u'\r\n{header}'.format(header=h)
+                    body += u'\r\n{header}'.format(header=h)
             body += u'\r\n\r\n{data}\r\n'.format(data=b['data'])
         body += u'--{boundary}--'.format(boundary=boundary)
         return body
