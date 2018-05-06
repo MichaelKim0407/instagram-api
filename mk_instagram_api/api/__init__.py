@@ -28,7 +28,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 logger = logging.getLogger('mk_instagram_api.api')
 
 
-class InstagramAPI:
+class InstagramAPI(object):
     def __init__(self, username, password):
         self.username = username
         self.password = password
