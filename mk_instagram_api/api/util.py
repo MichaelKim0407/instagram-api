@@ -11,6 +11,12 @@ from . import constant
 __author__ = 'Michael'
 
 
+def md5_hash(obj):
+    m = hashlib.md5()
+    m.update(obj)
+    return m.hexdigest()
+
+
 def generate_signature(data, skip_quote=False):
     if skip_quote:
         parsed_data = data
@@ -29,9 +35,7 @@ def generate_signature(data, skip_quote=False):
 
 def generate_device_id(seed):
     volatile_seed = "12345"
-    m = hashlib.md5()
-    m.update(seed.encode('utf-8') + volatile_seed.encode('utf-8'))
-    return 'android-' + m.hexdigest()[:16]
+    return 'android-' + md5_hash(seed.encode('utf-8') + volatile_seed.encode('utf-8'))[:16]
 
 
 def generate_uuid(type):  # TODO what does `type` mean; need better param name

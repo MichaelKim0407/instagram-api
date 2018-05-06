@@ -2,7 +2,6 @@
 import time
 
 import copy
-import hashlib
 import json
 import logging
 import os
@@ -28,32 +27,25 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class InstagramAPI:
-    # username            # Instagram username
-    # password            # Instagram password
-    # debug               # Debug
-    # uuid                # UUID
-    # device_id           # Device ID
-    # username_id         # Username ID
-    # token               # _csrftoken
-    # isLoggedIn          # Session status
-    # rank_token          # Rank token
-    # IGDataPath          # Data storage path
-
-    def __init__(self, username, password, debug=False, ig_data_path=None):
-        m = hashlib.md5()
-        m.update(username.encode('utf-8') + password.encode('utf-8'))
-        self.device_id = util.generate_device_id(m.hexdigest())
+    def __init__(self, username, password):
         self.username = username
         self.password = password
+        self.device_id = self.__generate_device_id()
         self.uuid = util.generate_uuid(True)
+
         self.is_logged_in = False
-        self.s = requests.Session()
+        self.session = requests.Session()
 
         self.last_response = None
         self.username_id = None
         self.rank_token = None
         self.token = None
         self.last_json = None
+
+    def __generate_device_id(self):
+        return util.generate_device_id(
+            util.md5_hash(self.username.encode('utf-8') + self.password.encode('utf-8'))
+        )
 
     def set_proxy(self, proxy=None):
         """
@@ -65,7 +57,7 @@ class InstagramAPI:
         if proxy is not None:
             print('Set proxy!')
             proxies = {'http': proxy, 'https': proxy}
-            self.s.proxies.update(proxies)
+            self.session.proxies.update(proxies)
 
     def login(self, force=False):
         if not self.is_logged_in or force:
@@ -135,15 +127,15 @@ class InstagramAPI:
         if is_sidecar:
             data['is_sidecar'] = '1'
         m = MultipartEncoder(data, boundary=self.uuid)
-        self.s.headers.update({'X-IG-Capabilities': '3Q4=',
-                               'X-IG-Connection-Type': 'WIFI',
-                               'Cookie2': '$Version=1',
-                               'Accept-Language': 'en-US',
-                               'Accept-Encoding': 'gzip, deflate',
-                               'Content-type': m.content_type,
-                               'Connection': 'close',
-                               'User-Agent': constant.USER_AGENT})
-        response = self.s.post(constant.API_URL + "upload/photo/", data=m.to_string())
+        self.session.headers.update({'X-IG-Capabilities': '3Q4=',
+                                     'X-IG-Connection-Type': 'WIFI',
+                                     'Cookie2': '$Version=1',
+                                     'Accept-Language': 'en-US',
+                                     'Accept-Encoding': 'gzip, deflate',
+                                     'Content-type': m.content_type,
+                                     'Connection': 'close',
+                                     'User-Agent': constant.USER_AGENT})
+        response = self.session.post(constant.API_URL + "upload/photo/", data=m.to_string())
         if response.status_code == 200:
             if self.configure(upload_id, photo, caption):
                 self.expose()
@@ -159,16 +151,16 @@ class InstagramAPI:
         if is_sidecar:
             data['is_sidecar'] = '1'
         m = MultipartEncoder(data, boundary=self.uuid)
-        self.s.headers.update({'X-IG-Capabilities': '3Q4=',
-                               'X-IG-Connection-Type': 'WIFI',
-                               'Host': 'i.instagram.com',
-                               'Cookie2': '$Version=1',
-                               'Accept-Language': 'en-US',
-                               'Accept-Encoding': 'gzip, deflate',
-                               'Content-type': m.content_type,
-                               'Connection': 'keep-alive',
-                               'User-Agent': constant.USER_AGENT})
-        response = self.s.post(constant.API_URL + "upload/video/", data=m.to_string())
+        self.session.headers.update({'X-IG-Capabilities': '3Q4=',
+                                     'X-IG-Connection-Type': 'WIFI',
+                                     'Host': 'i.instagram.com',
+                                     'Cookie2': '$Version=1',
+                                     'Accept-Language': 'en-US',
+                                     'Accept-Encoding': 'gzip, deflate',
+                                     'Content-type': m.content_type,
+                                     'Connection': 'keep-alive',
+                                     'User-Agent': constant.USER_AGENT})
+        response = self.session.post(constant.API_URL + "upload/video/", data=m.to_string())
         if response.status_code == 200:
             body = json.loads(response.text)
             upload_url = body['video_upload_urls'][3]['url']
@@ -179,19 +171,19 @@ class InstagramAPI:
             request_size = int(math.floor(len(video_data) / 4))
             last_request_extra = (len(video_data) - (request_size * 3))
 
-            headers = copy.deepcopy(self.s.headers)
-            self.s.headers.update({'X-IG-Capabilities': '3Q4=',
-                                   'X-IG-Connection-Type': 'WIFI',
-                                   'Cookie2': '$Version=1',
-                                   'Accept-Language': 'en-US',
-                                   'Accept-Encoding': 'gzip, deflate',
-                                   'Content-type': 'application/octet-stream',
-                                   'Session-ID': upload_id,
-                                   'Connection': 'keep-alive',
-                                   'Content-Disposition': 'attachment; filename="video.mov"',
-                                   'job': upload_job,
-                                   'Host': 'upload.instagram.com',
-                                   'User-Agent': constant.USER_AGENT})
+            headers = copy.deepcopy(self.session.headers)
+            self.session.headers.update({'X-IG-Capabilities': '3Q4=',
+                                         'X-IG-Connection-Type': 'WIFI',
+                                         'Cookie2': '$Version=1',
+                                         'Accept-Language': 'en-US',
+                                         'Accept-Encoding': 'gzip, deflate',
+                                         'Content-type': 'application/octet-stream',
+                                         'Session-ID': upload_id,
+                                         'Connection': 'keep-alive',
+                                         'Content-Disposition': 'attachment; filename="video.mov"',
+                                         'job': upload_job,
+                                         'Host': 'upload.instagram.com',
+                                         'User-Agent': constant.USER_AGENT})
             for i in range(0, 4):
                 start = i * request_size
                 if i == 3:
@@ -202,9 +194,9 @@ class InstagramAPI:
                 content_range = "bytes {start}-{end}/{lenVideo}".format(start=start, end=(end - 1),
                                                                         lenVideo=len(video_data)).encode('utf-8')
 
-                self.s.headers.update({'Content-Length': str(end - start), 'Content-Range': content_range, })
-                response = self.s.post(upload_url, data=video_data[start:start + length])
-            self.s.headers = headers
+                self.session.headers.update({'Content-Length': str(end - start), 'Content-Range': content_range, })
+                response = self.session.post(upload_url, data=video_data[start:start + length])
+            self.session.headers = headers
 
             if response.status_code == 200:
                 if self.configure_video(upload_id, video, thumbnail, caption):
@@ -402,7 +394,7 @@ class InstagramAPI:
             },
         ]
         data = self.build_body(bodies, boundary)
-        self.s.headers.update(
+        self.session.headers.update(
             {
                 'User-Agent': constant.USER_AGENT,
                 'Proxy-Connection': 'keep-alive',
@@ -413,7 +405,7 @@ class InstagramAPI:
             }
         )
         # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-        response = self.s.post(constant.API_URL + endpoint, data=data)
+        response = self.session.post(constant.API_URL + endpoint, data=data)
 
         if response.status_code == 200:
             self.last_response = response
@@ -463,14 +455,14 @@ class InstagramAPI:
             },
         ]
         data = self.build_body(bodies, boundary)
-        self.s.headers.update({'User-Agent': constant.USER_AGENT,
-                               'Proxy-Connection': 'keep-alive',
-                               'Connection': 'keep-alive',
-                               'Accept': '*/*',
-                               'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
-                               'Accept-Language': 'en-en'})
+        self.session.headers.update({'User-Agent': constant.USER_AGENT,
+                                     'Proxy-Connection': 'keep-alive',
+                                     'Connection': 'keep-alive',
+                                     'Accept': '*/*',
+                                     'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
+                                     'Accept-Language': 'en-en'})
         # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-        response = self.s.post(constant.API_URL + endpoint, data=data)
+        response = self.session.post(constant.API_URL + endpoint, data=data)
 
         if response.status_code == 200:
             self.last_response = response
@@ -921,19 +913,19 @@ class InstagramAPI:
         if not self.is_logged_in and not login:
             raise Exception("Not logged in!\n")
 
-        self.s.headers.update({'Connection': 'close',
-                               'Accept': '*/*',
-                               'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                               'Cookie2': '$Version=1',
-                               'Accept-Language': 'en-US',
-                               'User-Agent': constant.USER_AGENT})
+        self.session.headers.update({'Connection': 'close',
+                                     'Accept': '*/*',
+                                     'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                                     'Cookie2': '$Version=1',
+                                     'Accept-Language': 'en-US',
+                                     'User-Agent': constant.USER_AGENT})
 
         while True:
             try:
                 if post is not None:
-                    response = self.s.post(constant.API_URL + endpoint, data=post, verify=verify)
+                    response = self.session.post(constant.API_URL + endpoint, data=post, verify=verify)
                 else:
-                    response = self.s.get(constant.API_URL + endpoint, verify=verify)
+                    response = self.session.get(constant.API_URL + endpoint, verify=verify)
                 break
             except Exception as e:
                 print('Except on SendRequest (wait 60 sec and resend): ' + str(e))
