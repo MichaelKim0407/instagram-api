@@ -19,6 +19,8 @@ __author__ = 'Michael'
 class UploadAPI(BaseAPI):
     @endpoint('upload/photo/')
     def upload_photo(self, photo, caption=None, upload_id=None, is_sidecar=None):
+        uri = 'upload/photo/'
+
         if upload_id is None:
             upload_id = util.generate_upload_id()
         data = {
@@ -47,7 +49,7 @@ class UploadAPI(BaseAPI):
             'User-Agent': constant.USER_AGENT,
         })
         response = self.session.post(
-            constant.API_URL + 'upload/photo/',
+            constant.API_URL + uri,
             data=m.to_string()
         )
 
@@ -59,6 +61,8 @@ class UploadAPI(BaseAPI):
 
     @endpoint('upload/video/')
     def upload_video(self, video, thumbnail, caption=None, upload_id=None, is_sidecar=None):
+        uri = 'upload/video/'
+
         if upload_id is None:
             upload_id = util.generate_upload_id()
         data = {
@@ -82,7 +86,7 @@ class UploadAPI(BaseAPI):
             'User-Agent': constant.USER_AGENT,
         })
         response = self.session.post(
-            constant.API_URL + 'upload/video/',
+            constant.API_URL + uri,
             data=m.to_string()
         )
 

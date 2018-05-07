@@ -169,7 +169,7 @@ class BaseAPI(object):
             }
             self.session.proxies.update(proxies)
 
-    def send_request(self, endpoint, data=None, require_login=True):
+    def send_request(self, uri, data=None, require_login=True):
         verify = False  # don't show request warning
 
         if not self.is_logged_in and require_login:
@@ -191,13 +191,13 @@ class BaseAPI(object):
 
                 if data is not None:
                     response = self.session.post(
-                        constant.API_URL + endpoint,
+                        constant.API_URL + uri,
                         data=data,
                         verify=verify
                     )
                 else:
                     response = self.session.get(
-                        constant.API_URL + endpoint,
+                        constant.API_URL + uri,
                         verify=verify
                     )
 
@@ -208,7 +208,7 @@ class BaseAPI(object):
                 if retry_times >= self.retry_times:
                     raise
                 logger.warning('Endpoint: {}; Response code: {}; retrying #{}...'.format(
-                    endpoint,
+                    uri,
                     e.status_code,
                     retry_times
                 ))

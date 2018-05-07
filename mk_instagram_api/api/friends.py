@@ -1,5 +1,3 @@
-import urllib.parse
-
 from ._base import *
 
 __author__ = 'Michael'
@@ -10,17 +8,14 @@ class FriendsAPI(BaseAPI):
     def auto_complete_user_list(self):
         pass
 
-    @endpoint('friendships/{}/following/')
-    def get_user_followings(self, user_id, max_id=''):
-        url = 'friendships/{}/following/?'.format(user_id)
-        query_string = {
-            'ig_sig_key_version': constant.SIG_KEY_VERSION,
-            'rank_token': self.rank_token,
-        }
-        if max_id:
-            query_string['max_id'] = max_id
-        url += urllib.parse.urlencode(query_string)
-        return self.send_request(url)
+    @get('friendships/{user_id}/following/', ranked=True)
+    def get_user_followings(self, user_id, max_id=None):
+        return {
+                   'user_id': user_id,
+               }, {
+                   'ig_sig_key_version': constant.SIG_KEY_VERSION,
+                   'max_id': max_id,
+               }
 
     def get_self_user_followings(self):
         return self.get_user_followings(self.user_id)

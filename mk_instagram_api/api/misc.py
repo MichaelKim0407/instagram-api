@@ -60,8 +60,10 @@ class MiscAPI(BaseAPI):
 
     @endpoint('address_book/link/?include=extra_display_name,thumbnails')
     def sync_from_address_book(self, contacts):
+        uri = 'address_book/link/?include=extra_display_name,thumbnails'
+
         return self.send_request(
-            'address_book/link/?include=extra_display_name,thumbnails',
+            uri,
             "contacts={}".format(
                 json.dumps(contacts)
             )
