@@ -102,7 +102,7 @@ class post(endpoint):
         return __new_method
 
 
-class InstagramAPI(object):
+class _BaseAPI(object):
     def __init__(self, username, password):
         self.username = username
         self.password = password
@@ -157,6 +157,20 @@ class InstagramAPI(object):
         if retry_interval is not None:
             self.retry_interval = retry_interval
 
+    def set_proxy(self, proxy=None):
+        """
+        Set proxy for all requests::
+
+        Proxy format - user:password@ip:port
+        """
+        if proxy is not None:
+            logger.info('Set proxy!')
+            proxies = {
+                'http': proxy,
+                'https': proxy,
+            }
+            self.session.proxies.update(proxies)
+
     def send_request(self, endpoint, data=None, login=False):
         verify = False  # don't show request warning
 
@@ -202,20 +216,6 @@ class InstagramAPI(object):
                 ))
                 time.sleep(self.retry_interval)
 
-    def set_proxy(self, proxy=None):
-        """
-        Set proxy for all requests::
-
-        Proxy format - user:password@ip:port
-        """
-        if proxy is not None:
-            logger.info('Set proxy!')
-            proxies = {
-                'http': proxy,
-                'https': proxy,
-            }
-            self.session.proxies.update(proxies)
-
     def login(self, force=False):
         if self.is_logged_in and not force:
             return
@@ -257,8 +257,8 @@ class InstagramAPI(object):
     def logout(self):
         self.is_logged_in = False
 
-    # --- profile ---
 
+class ProfileAPI(_BaseAPI):
     @post('accounts/change_password/')
     def change_password(self, new_password):
         return None, {
@@ -306,8 +306,8 @@ class InstagramAPI(object):
             'phone_number': phone,
         }
 
-    # --- user interactions ---
 
+class FriendsAPI(_BaseAPI):
     @get('friendships/autocomplete_user_list/')
     def auto_complete_user_list(self):
         pass
@@ -324,6 +324,25 @@ class InstagramAPI(object):
         url += urllib.parse.urlencode(query_string)
         return self.send_request(url)
 
+    def get_self_user_followings(self):
+        return self.get_user_followings(self.user_id)
+
+    def get_total_followings(self, user_id):
+        followers = []
+        next_max_id = ''
+        while True:
+            temp = self.get_user_followings(user_id, next_max_id)
+
+            for item in temp["users"]:
+                followers.append(item)
+
+            if temp["big_list"] is False:
+                return followers
+            next_max_id = temp["next_max_id"]
+
+    def get_total_self_followings(self):
+        return self.get_total_followings(self.user_id)
+
     @get('friendships/{user_id}/followers/', ranked=True)
     def get_user_followers(self, user_id, max_id=None):
         return {
@@ -331,6 +350,25 @@ class InstagramAPI(object):
                }, {
                    'max_id': max_id,
                }
+
+    def get_self_user_followers(self):
+        return self.get_user_followers(self.user_id)
+
+    def get_total_followers(self, user_id):
+        followers = []
+        next_max_id = ''
+        while True:
+            temp = self.get_user_followers(user_id, next_max_id)
+
+            for item in temp["users"]:
+                followers.append(item)
+
+            if temp["big_list"] is False:
+                return followers
+            next_max_id = temp["next_max_id"]
+
+    def get_total_self_followers(self):
+        return self.get_total_followers(self.user_id)
 
     @get('friendships/pending')
     def get_pending_follow_requests(self):
@@ -378,13 +416,16 @@ class InstagramAPI(object):
             'user_id': user_id,
         }
 
-    # --- users ---
 
+class UserAPI(_BaseAPI):
     @get('users/{user_id}/info/')
     def get_username_info(self, user_id):
         return {
             'user_id': user_id,
         }
+
+    def get_self_username_info(self):
+        return self.get_username_info(self.user_id)
 
     @get('users/search/', ranked=True)
     def search_users(self, query):
@@ -400,8 +441,8 @@ class InstagramAPI(object):
             'username': username,
         }
 
-    # --- feed ---
 
+class FeedAPI(_BaseAPI):
     @get('feed/user/{user_id}/reel_media/')
     def get_story(self, user_id):
         return {
@@ -433,6 +474,23 @@ class InstagramAPI(object):
                    'min_timestamp': min_timestamp,
                }
 
+    def get_self_user_feed(self, max_id='', min_timestamp=None):
+        return self.get_user_feed(self.user_id, max_id, min_timestamp)
+
+    def get_total_user_feed(self, user_id, min_timestamp=None):
+        user_feed = []
+        next_max_id = ''
+        while True:
+            temp = self.get_user_feed(user_id, next_max_id, min_timestamp)
+            for item in temp["items"]:
+                user_feed.append(item)
+            if temp["more_available"] is False:
+                return user_feed
+            next_max_id = temp["next_max_id"]
+
+    def get_total_self_user_feed(self, min_timestamp=None):
+        return self.get_total_user_feed(self.user_id, min_timestamp)
+
     @get('feed/location/{location_id}/', ranked=True)
     def get_location_feed(self, location_id, max_id=None):
         return {
@@ -453,8 +511,18 @@ class InstagramAPI(object):
             'max_id': max_id,
         }
 
-    # --- posts ---
+    def get_total_liked_media(self, scan_rate=1):
+        next_id = ''
+        liked_items = []
+        for x in range(0, scan_rate):
+            temp = self.get_liked_media(next_id)
+            next_id = temp["next_max_id"]
+            for item in temp["items"]:
+                liked_items.append(item)
+        return liked_items
 
+
+class PostAPI(_BaseAPI):
     @post('media/{media_id}/edit_media/')
     def edit_media(self, media_id, caption_text=''):
         return {
@@ -537,8 +605,8 @@ class InstagramAPI(object):
                    'max_id': max_id,
                }
 
-    # --- upload ---
 
+class UploadAPI(_BaseAPI):
     @endpoint('upload/photo/')
     def upload_photo(self, photo, caption=None, upload_id=None, is_sidecar=None):
         if upload_id is None:
@@ -876,8 +944,8 @@ class InstagramAPI(object):
             'children_metadata': children_metadata,
         }
 
-    # --- direct messaging ---
 
+class MessagingAPI(_BaseAPI):
     @get('direct_v2/inbox/')
     def get_v2_inbox(self):
         pass
@@ -1009,8 +1077,8 @@ class InstagramAPI(object):
 
         return self.__handle_response(response)
 
-    # --- live ---
 
+class LiveAPI(_BaseAPI):
     @post('live/create/')
     def create_broadcast(self, preview_width=1080, preview_height=1920, broadcast_message=''):
         return None, {
@@ -1042,8 +1110,8 @@ class InstagramAPI(object):
                    'broadcast_id': broadcast_id,
                }, None
 
-    # --- misc ---
 
+class MiscAPI(_BaseAPI):
     @post('/qe/sync/')
     def sync_features(self):
         return None, {
@@ -1080,11 +1148,17 @@ class InstagramAPI(object):
             'user_id': user_id,
         }
 
+    def get_self_usertags(self):
+        return self.get_usertags(self.user_id)
+
     @get('maps/user/{user_id}/')
     def get_geo_media(self, user_id):
         return {
             'user_id': user_id,
         }
+
+    def get_self_geo_media(self):
+        return self.get_geo_media(self.user_id)
 
     @get('fbsearch/topsearch/', ranked=True)
     def fb_user_search(self, query):
@@ -1123,78 +1197,16 @@ class InstagramAPI(object):
         # TODO Instagram.php 1470-1485
         raise NotImplementedError()
 
-    # --- shortcuts ---
 
-    def get_self_username_info(self):
-        return self.get_username_info(self.user_id)
-
-    def get_self_usertags(self):
-        return self.get_usertags(self.user_id)
-
-    def get_self_geo_media(self):
-        return self.get_geo_media(self.user_id)
-
-    def get_self_user_feed(self, max_id='', min_timestamp=None):
-        return self.get_user_feed(self.user_id, max_id, min_timestamp)
-
-    def get_self_user_followings(self):
-        return self.get_user_followings(self.user_id)
-
-    def get_self_user_followers(self):
-        return self.get_user_followers(self.user_id)
-
-    def get_total_followers(self, user_id):
-        followers = []
-        next_max_id = ''
-        while True:
-            temp = self.get_user_followers(user_id, next_max_id)
-
-            for item in temp["users"]:
-                followers.append(item)
-
-            if temp["big_list"] is False:
-                return followers
-            next_max_id = temp["next_max_id"]
-
-    def get_total_followings(self, user_id):
-        followers = []
-        next_max_id = ''
-        while True:
-            temp = self.get_user_followings(user_id, next_max_id)
-
-            for item in temp["users"]:
-                followers.append(item)
-
-            if temp["big_list"] is False:
-                return followers
-            next_max_id = temp["next_max_id"]
-
-    def get_total_user_feed(self, user_id, min_timestamp=None):
-        user_feed = []
-        next_max_id = ''
-        while True:
-            temp = self.get_user_feed(user_id, next_max_id, min_timestamp)
-            for item in temp["items"]:
-                user_feed.append(item)
-            if temp["more_available"] is False:
-                return user_feed
-            next_max_id = temp["next_max_id"]
-
-    def get_total_self_user_feed(self, min_timestamp=None):
-        return self.get_total_user_feed(self.user_id, min_timestamp)
-
-    def get_total_self_followers(self):
-        return self.get_total_followers(self.user_id)
-
-    def get_total_self_followings(self):
-        return self.get_total_followings(self.user_id)
-
-    def get_total_liked_media(self, scan_rate=1):
-        next_id = ''
-        liked_items = []
-        for x in range(0, scan_rate):
-            temp = self.get_liked_media(next_id)
-            next_id = temp["next_max_id"]
-            for item in temp["items"]:
-                liked_items.append(item)
-        return liked_items
+class InstagramAPI(
+    ProfileAPI,
+    FriendsAPI,
+    UserAPI,
+    FeedAPI,
+    PostAPI,
+    UploadAPI,
+    MessagingAPI,
+    LiveAPI,
+    MiscAPI
+):
+    pass
