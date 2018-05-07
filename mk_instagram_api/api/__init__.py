@@ -1,4 +1,4 @@
-﻿import math
+import math
 
 import copy
 import json
@@ -132,10 +132,15 @@ class InstagramAPI(object):
             self.last_response = response
             return json.loads(response.text)
 
-        # check for sentry block
-        result = json.loads(response.text)
-        if 'error_type' in result and result['error_type'] == 'sentry_block':
-            raise SentryBlockError(result['message'])
+        try:
+            # check for sentry block
+            result = json.loads(response.text)
+            if 'error_type' in result and result['error_type'] == 'sentry_block':
+                raise SentryBlockError(result['message'])
+        except SentryBlockError:
+            raise
+        except Exception:
+            pass
 
         raise ResponseError(response.status_code, response)
 
