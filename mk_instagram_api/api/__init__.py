@@ -1,4 +1,4 @@
-import math
+﻿import math
 
 import copy
 import json
@@ -222,11 +222,6 @@ class InstagramAPI(object):
         self.rank_token = self.__generate_rank_token()
         self.token = self.last_response.cookies["csrftoken"]
 
-        self.sync_features()
-        self.auto_complete_user_list()
-        self.timeline_feed()
-        self.get_v2_inbox()
-        self.get_recent_activity()
         logger.info("Login success!")
 
     @get('accounts/logout/')
