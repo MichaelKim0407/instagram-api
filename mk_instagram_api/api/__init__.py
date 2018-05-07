@@ -1,4 +1,5 @@
 ﻿import math
+import time
 
 import copy
 import json
@@ -109,12 +110,16 @@ class InstagramAPI(object):
         self.uuid = util.generate_uuid()
 
         self.is_logged_in = False
-        self.session = requests.Session()
-
-        self.last_response = None
         self.user_id = None
+
+        self.session = requests.Session()
+        self.last_response = None
         self.rank_token = None
         self.token = None
+
+        self.retry = True
+        self.retry_times = 3
+        self.retry_interval = 5  # seconds
 
     def __generate_device_id(self):
         return util.generate_device_id(
@@ -144,6 +149,14 @@ class InstagramAPI(object):
 
         raise ResponseError(response.status_code, response)
 
+    def configure_retry(self, retry=None, retry_times=None, retry_interval=None):
+        if retry is not None:
+            self.retry = bool(retry)
+        if retry_times is not None:
+            self.retry_times = retry_times
+        if retry_interval is not None:
+            self.retry_interval = retry_interval
+
     def send_request(self, endpoint, data=None, login=False):
         verify = False  # don't show request warning
 
@@ -159,19 +172,35 @@ class InstagramAPI(object):
             'User-Agent': constant.USER_AGENT,
         })
 
-        if data is not None:
-            response = self.session.post(
-                constant.API_URL + endpoint,
-                data=data,
-                verify=verify
-            )
-        else:
-            response = self.session.get(
-                constant.API_URL + endpoint,
-                verify=verify
-            )
+        retry_times = 0
+        while True:
+            try:
+                retry_times += 1
 
-        return self.__handle_response(response)
+                if data is not None:
+                    response = self.session.post(
+                        constant.API_URL + endpoint,
+                        data=data,
+                        verify=verify
+                    )
+                else:
+                    response = self.session.get(
+                        constant.API_URL + endpoint,
+                        verify=verify
+                    )
+
+                return self.__handle_response(response)
+            except ResponseError as e:
+                if not self.retry:
+                    raise
+                if retry_times >= self.retry_times:
+                    raise
+                logger.warning('Endpoint: {}; Response code: {}; retrying #{}...'.format(
+                    endpoint,
+                    e.status_code,
+                    retry_times
+                ))
+                time.sleep(self.retry_interval)
 
     def set_proxy(self, proxy=None):
         """
