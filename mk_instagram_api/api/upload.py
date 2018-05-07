@@ -4,9 +4,7 @@ import copy
 from datetime import datetime
 from requests_toolbelt import MultipartEncoder
 
-from .ImageUtils import get_image_size
 from ._base import *
-from .exceptions import *
 
 try:
     from moviepy.editor import VideoFileClip
@@ -244,7 +242,7 @@ class UploadAPI(BaseAPI):
 
     @post('media/configure/')
     def configure_photo(self, upload_id, photo, caption=''):
-        (w, h) = get_image_size(photo)
+        (w, h) = util.get_image_size(photo)
         return None, {
             'media_folder': 'Instagram',
             'source_type': 4,
