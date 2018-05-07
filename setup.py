@@ -14,6 +14,12 @@ setup(
 
     packages=find_packages(),
 
+    install_requires=[
+        'requests',
+        'requests-toolbelt',
+        'moviepy',
+    ],
+
     url="https://github.com/MichaelKim0407/instagram-api",
 
     license="MIT",
