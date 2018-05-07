@@ -246,7 +246,7 @@ class UploadAPI(BaseAPI):
             'source_type': 4,
             'caption': caption,
             'upload_id': upload_id,
-            'device': constant.DEVICE_SETTINTS,
+            'device': constant.DEVICE_SETTINGS,
             'edits': {
                 'crop_original_size': [w * 1.0, h * 1.0],
                 'crop_center': [0.0, 0.0],
@@ -279,7 +279,7 @@ class UploadAPI(BaseAPI):
                 'source_width': clip.size[0],
                 'source_height': clip.size[1],
             },
-            'device': constant.DEVICE_SETTINTS,
+            'device': constant.DEVICE_SETTINGS,
             '_csrftoken': self.token,
             '_uuid': self.uuid,
             '_uid': self.user_id,

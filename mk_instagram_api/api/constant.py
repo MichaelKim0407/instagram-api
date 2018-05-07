@@ -2,7 +2,7 @@ __author__ = 'Michael'
 
 API_URL = 'https://i.instagram.com/api/v1/'
 
-DEVICE_SETTINTS = {
+DEVICE_SETTINGS = {
     'manufacturer': 'Xiaomi',
     'model': 'HM 1SW',
     'android_version': 18,
@@ -15,7 +15,7 @@ USER_AGENT = 'Instagram 10.26.0 Android ({android_version}/{android_release}; ' 
              '{model}; ' \
              'armani; ' \
              'qcom; ' \
-             'en_US)'.format(**DEVICE_SETTINTS)
+             'en_US)'.format(**DEVICE_SETTINGS)
 
 IG_SIG_KEY = '4f8732eb9ba7d1c8e8897a75d6474d4eb3f5279137431b2aafb71fafe2abe178'
 SIG_KEY_VERSION = '4'
