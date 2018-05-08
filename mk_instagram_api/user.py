@@ -1,14 +1,17 @@
+from typing import List, Iterable, Dict
+
 from . import get_api, big_list
+from .api import InstagramAPI
 
 __author__ = 'Michael'
 
 
 class User(object):
-    def __init__(self, pk, username, api=None, **kwargs):
-        self.api = get_api(api)
+    def __init__(self, pk: int, username: str, api: InstagramAPI = None, **kwargs):
+        self.api: InstagramAPI = get_api(api)
 
-        self.user_id = pk
-        self.username = username
+        self.user_id: int = pk
+        self.username: str = username
         self.__kwargs = kwargs
 
         self.__updated = False
@@ -17,16 +20,16 @@ class User(object):
         return "User [{}] '{}'".format(self.user_id, self.username)
 
     @staticmethod
-    def get_by_id(user_id, api=None):
+    def get_by_id(user_id: int, api: InstagramAPI = None) -> 'User':
         api = get_api(api)
         return User(**api.user_get_info(user_id)['user'], api=api)
 
     @staticmethod
-    def get_by_name(username, api=None):
+    def get_by_name(username: str, api: InstagramAPI = None) -> 'User':
         api = get_api(api)
         return User(**api.user_get_info_by_username(username)['user'], api=api)
 
-    def update_info(self, force=False):
+    def update_info(self, force: bool = False) -> 'User':
         if self.__updated and not force:
             return self
 
@@ -36,45 +39,47 @@ class User(object):
         self.__updated = True
         return self
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str):
         if item not in self.__kwargs:
             self.update_info()
         return self.__kwargs[item]
 
-    def attributes_available(self):
+    def attributes_available(self) -> List[str]:
         self.update_info()
         return sorted(self.__kwargs.keys())
 
-    def relationship(self):
-        return self.api.friends_get_user_relationships(self.user_id)
+    def relationship(self) -> Dict[str, bool]:
+        result = self.api.friends_get_user_relationships(self.user_id)
+        del result['status']
+        return result
 
     @big_list()
-    def followings_iter(self, max_id):
+    def followings_iter(self, max_id) -> Iterable['User']:
         for user in self.api.friends_get_followings(self.user_id, max_id)['users']:
             yield User(**user, api=self.api)
 
-    def followings(self):
+    def followings(self) -> List['User']:
         return list(self.followings_iter())
 
     @big_list()
-    def followers_iter(self, max_id):
+    def followers_iter(self, max_id) -> Iterable['User']:
         for user in self.api.friends_get_followers(self.user_id, max_id)['users']:
             yield User(**user, api=self.api)
 
-    def followers(self):
+    def followers(self) -> List['User']:
         return list(self.followers_iter())
 
 
 class LoggedInUser(User):
-    __instances = {}
+    __instances: Dict[InstagramAPI, 'LoggedInUser'] = {}
 
-    def __init__(self, api=None):
+    def __init__(self, api: InstagramAPI = None):
         api = get_api(api)
         super().__init__(**api.logged_in_user, api=api)
         self.__instances[api] = self
 
     @staticmethod
-    def get(api=None):
+    def get(api: InstagramAPI = None) -> 'LoggedInUser':
         api = get_api(api)
         if api in LoggedInUser.__instances:
             return LoggedInUser.__instances[api]
@@ -82,9 +87,9 @@ class LoggedInUser(User):
             return LoggedInUser(api)
 
     @staticmethod
-    def get_by_id(user_id, api=None):
+    def get_by_id(user_id: int, api: InstagramAPI = None):
         raise TypeError('Access this method through User class')
 
     @staticmethod
-    def get_by_name(username, api=None):
+    def get_by_name(username: str, api: InstagramAPI = None):
         raise TypeError('Access this method through User class')

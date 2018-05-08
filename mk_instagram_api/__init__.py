@@ -11,7 +11,7 @@ class NoGlobalAPI(Exception):
     pass
 
 
-def login(username, password) -> InstagramAPI:
+def login(username: str, password: str) -> InstagramAPI:
     global __api_global
     __api_global = InstagramAPI(username, password)
     __api_global.login()
