@@ -107,7 +107,7 @@ class BaseAPI(object):
         self.device_id = self.__generate_device_id()
         self.uuid = util.generate_uuid()
 
-        self.is_logged_in = False
+        self.logged_in_user = None
         self.user_id = None
 
         self.session = requests.Session()
@@ -133,7 +133,10 @@ class BaseAPI(object):
     def __handle_response(self, response):
         if response.status_code == 200:
             self.last_response = response
-            return json.loads(response.text)
+            result = json.loads(response.text)
+            if result['status'] != 'ok':
+                raise ResponseError(200, response)
+            return result
 
         try:
             # check for sentry block
@@ -172,7 +175,7 @@ class BaseAPI(object):
     def send_request(self, uri, data=None, require_login=True):
         verify = False  # don't show request warning
 
-        if not self.is_logged_in and require_login:
+        if self.logged_in_user is None and require_login:
             raise RequireLogin()
 
         self.session.headers.update({
@@ -243,15 +246,15 @@ class BaseAPI(object):
         }
 
     def login(self, force=False):
-        if self.is_logged_in and not force:
+        if self.logged_in_user is not None and not force:
             return
 
         self.__fetch_headers()
 
         result = self.__login()
 
-        self.is_logged_in = True
-        self.user_id = result["logged_in_user"]["pk"]
+        self.logged_in_user = result['logged_in_user']
+        self.user_id = self.logged_in_user['pk']
         self.rank_token = self.__generate_rank_token()
         self.token = self.last_response.cookies["csrftoken"]
         logger.info("Logged in as [{}] {}".format(self.user_id, self.username))
@@ -264,6 +267,7 @@ class BaseAPI(object):
 
     def logout(self):
         result = self.__logout()
-        self.is_logged_in = False
+        self.logged_in_user = None
+        self.user_id = None
         logger.info("Logged out")
         return result

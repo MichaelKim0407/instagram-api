@@ -26,4 +26,11 @@ class InstagramAPI(
     UserAPI,
     MiscAPI
 ):
-    pass
+    def __enter__(self):
+        if self.logged_in_user is None:
+            self.login()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.logged_in_user is not None:
+            self.logout()
