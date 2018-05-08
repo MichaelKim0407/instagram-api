@@ -7,11 +7,11 @@ __author__ = 'Michael'
 
 class MessagingAPI(BaseAPI):
     @get('direct_v2/inbox/')
-    def get_v2_inbox(self):
+    def dm_get_inbox(self):
         pass
 
     @get('direct_v2/threads/{thread}')
-    def get_v2_threads(self, thread, cursor=None):
+    def dm_get_thread(self, thread, cursor=None):
         return {
                    'thread': thread,
                }, {
@@ -37,7 +37,7 @@ class MessagingAPI(BaseAPI):
         return body
 
     @endpoint('direct_v2/threads/broadcast/text/')
-    def direct_message(self, text, recipients):
+    def dm_send_text(self, text, recipients):
         uri = 'direct_v2/threads/broadcast/text/'
 
         if not isinstance(recipients, list):
@@ -88,7 +88,7 @@ class MessagingAPI(BaseAPI):
         raise ResponseError(response.status_code, response)
 
     @endpoint('direct_v2/threads/broadcast/media_share/?media_type=photo')
-    def direct_share(self, media_id, recipients, text=None):
+    def dm_send_share(self, media_id, recipients, text=None):
         uri = 'direct_v2/threads/broadcast/media_share/?media_type=photo'
 
         if not isinstance(recipients, list):

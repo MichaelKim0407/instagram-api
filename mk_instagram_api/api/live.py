@@ -5,7 +5,7 @@ __author__ = 'Michael'
 
 class LiveAPI(BaseAPI):
     @post('live/create/')
-    def create_broadcast(self, preview_width=1080, preview_height=1920, broadcast_message=''):
+    def live_create(self, preview_width=1080, preview_height=1920, broadcast_message=''):
         return None, {
             'preview_height': preview_height,
             'preview_width': preview_width,
@@ -15,7 +15,7 @@ class LiveAPI(BaseAPI):
         }
 
     @post('live/{broadcast_id}/start')
-    def start_broadcast(self, broadcast_id, send_notification=False):
+    def live_start(self, broadcast_id, send_notification=False):
         return {
                    'broadcast_id': broadcast_id,
                }, {
@@ -23,14 +23,14 @@ class LiveAPI(BaseAPI):
                }
 
     @post('live/{broadcast_id}/end_broadcast/')
-    def stop_broadcast(self, broadcast_id):
+    def live_stop(self, broadcast_id):
         return {
                    'broadcast_id': broadcast_id,
                }, None
 
     @post('live/{broadcast_id}/add_to_post_live/')
-    def add_broadcast_to_live(self, broadcast_id):
-        # broadcast has to be ended first!
+    def live_add_to_stories(self, broadcast_id):
+        # live has to be ended first!
         return {
                    'broadcast_id': broadcast_id,
                }, None

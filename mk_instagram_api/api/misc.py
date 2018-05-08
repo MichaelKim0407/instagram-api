@@ -33,17 +33,11 @@ class MiscAPI(BaseAPI):
             'user_id': user_id,
         }
 
-    def get_self_usertags(self):
-        return self.get_usertags(self.user_id)
-
     @get('maps/user/{user_id}/')
     def get_geo_media(self, user_id):
         return {
             'user_id': user_id,
         }
-
-    def get_self_geo_media(self):
-        return self.get_geo_media(self.user_id)
 
     @get('fbsearch/topsearch/', ranked=True)
     def fb_user_search(self, query):
