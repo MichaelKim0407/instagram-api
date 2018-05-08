@@ -19,37 +19,10 @@ class MiscAPI(BaseAPI):
     def explore(self):
         pass
 
-    @get('news/inbox/')
-    def get_recent_activity(self):
-        pass
-
-    @get('news/')
-    def get_following_recent_activity(self):
-        pass
-
-    @get('usertags/{user_id}/feed/', ranked=True)
-    def get_usertags(self, user_id):
-        return {
-            'user_id': user_id,
-        }
-
-    @get('maps/user/{user_id}/')
-    def get_geo_media(self, user_id):
-        return {
-            'user_id': user_id,
-        }
-
-    @get('fbsearch/topsearch/', ranked=True)
-    def fb_user_search(self, query):
+    @get('feed/popular/', ranked=True)
+    def popular(self):
         return None, {
-            'context': 'blended',
-            'query': query,
-        }
-
-    @get('fbsearch/places/', ranked=True)
-    def search_location(self, query):
-        return None, {
-            'query': query,
+            'people_teaser_supported': 1,
         }
 
     @endpoint('address_book/link/?include=extra_display_name,thumbnails')
@@ -62,17 +35,6 @@ class MiscAPI(BaseAPI):
                 json.dumps(contacts)
             )
         )
-
-    @get('tags/search/', ranked=True)
-    def search_tags(self, query):
-        return None, {
-            'is_typeahead': 'true',
-            'q': query,
-        }
-
-    @get('direct_share/inbox/')
-    def get_direct_share(self):
-        pass
 
     def backup(self):
         # TODO Instagram.php 1470-1485

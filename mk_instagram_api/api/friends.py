@@ -8,6 +8,14 @@ class FriendsAPI(BaseAPI):
     def friends_autocomplete(self):
         pass
 
+    @post('friendships/show/{user_id}/')
+    def friends_get_user_relationships(self, user_id):
+        return {
+            'user_id': user_id,
+        }
+
+    # --- follow ---
+
     @get('friendships/{user_id}/following/', ranked=True)
     def friends_get_followings(self, user_id, max_id=None):
         return {
@@ -25,6 +33,20 @@ class FriendsAPI(BaseAPI):
                    'max_id': max_id,
                }
 
+    @post('friendships/create/{user_id}/')
+    def friends_follow(self, user_id):
+        return {
+            'user_id': user_id,
+        }
+
+    @post('friendships/destroy/{user_id}/')
+    def friends_unfollow(self, user_id):
+        return {
+            'user_id': user_id,
+        }
+
+    # --- requests ---
+
     @get('friendships/pending')
     def friends_get_requests(self):
         pass
@@ -41,17 +63,7 @@ class FriendsAPI(BaseAPI):
             'user_id': user_id,
         }
 
-    @post('friendships/create/{user_id}/')
-    def friends_follow(self, user_id):
-        return {
-            'user_id': user_id,
-        }
-
-    @post('friendships/destroy/{user_id}/')
-    def friends_unfollow(self, user_id):
-        return {
-            'user_id': user_id,
-        }
+    # --- block ---
 
     @post('friendships/block/{user_id}/')
     def friends_block(self, user_id):
@@ -61,12 +73,6 @@ class FriendsAPI(BaseAPI):
 
     @post('friendships/unblock/{user_id}/')
     def friends_unblock(self, user_id):
-        return {
-            'user_id': user_id,
-        }
-
-    @post('friendships/show/{user_id}/')
-    def friends_get_user_relationships(self, user_id):
         return {
             'user_id': user_id,
         }

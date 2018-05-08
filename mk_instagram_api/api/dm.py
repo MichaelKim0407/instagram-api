@@ -18,6 +18,10 @@ class MessagingAPI(BaseAPI):
                    'cursor': cursor,
                }
 
+    @get('direct_share/inbox/')
+    def dm_get_share(self):
+        pass
+
     @staticmethod
     def __build_body(bodies, boundary):
         body = u''

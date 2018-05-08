@@ -4,6 +4,22 @@ __author__ = 'Michael'
 
 
 class ProfileAPI(BaseAPI):
+    @post('accounts/current_user/?edit=true')
+    def profile_get_data(self):
+        pass
+
+    @post('accounts/edit_profile/')
+    def profile_edit(self, url, phone, first_name, biography, email, gender):
+        return None, {
+            'external_url': url,
+            'phone_number': phone,
+            'username': self.username,
+            'full_name': first_name,
+            'biography': biography,
+            'email': email,
+            'gender': gender,
+        }
+
     @post('accounts/change_password/')
     def profile_change_password(self, new_password):
         return None, {
@@ -27,22 +43,6 @@ class ProfileAPI(BaseAPI):
     @post('accounts/set_public/')
     def profile_set_public(self):
         pass
-
-    @post('accounts/current_user/?edit=true')
-    def profile_get_data(self):
-        pass
-
-    @post('accounts/edit_profile/')
-    def profile_edit(self, url, phone, first_name, biography, email, gender):
-        return None, {
-            'external_url': url,
-            'phone_number': phone,
-            'username': self.username,
-            'full_name': first_name,
-            'biography': biography,
-            'email': email,
-            'gender': gender,
-        }
 
     @post('accounts/set_phone_and_name/')
     def profile_set_contact(self, name='', phone=''):
