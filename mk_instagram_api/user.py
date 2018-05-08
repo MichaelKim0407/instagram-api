@@ -80,3 +80,11 @@ class LoggedInUser(User):
             return LoggedInUser.__instances[api]
         else:
             return LoggedInUser(api)
+
+    @staticmethod
+    def get_by_id(user_id, api=None):
+        raise TypeError('Access this method through User class')
+
+    @staticmethod
+    def get_by_name(username, api=None):
+        raise TypeError('Access this method through User class')
