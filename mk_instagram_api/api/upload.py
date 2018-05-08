@@ -4,9 +4,7 @@ import copy
 from datetime import datetime
 from requests_toolbelt import MultipartEncoder
 
-from .ImageUtils import get_image_size
 from ._base import *
-from .exceptions import *
 
 try:
     from moviepy.editor import VideoFileClip
@@ -19,6 +17,8 @@ __author__ = 'Michael'
 class UploadAPI(BaseAPI):
     @endpoint('upload/photo/')
     def upload_photo(self, photo, caption=None, upload_id=None, is_sidecar=None):
+        uri = 'upload/photo/'
+
         if upload_id is None:
             upload_id = util.generate_upload_id()
         data = {
@@ -47,18 +47,20 @@ class UploadAPI(BaseAPI):
             'User-Agent': constant.USER_AGENT,
         })
         response = self.session.post(
-            constant.API_URL + 'upload/photo/',
+            constant.API_URL + uri,
             data=m.to_string()
         )
 
         if response.status_code != 200:
             raise UploadFailed()
 
-        self.configure_photo(upload_id, photo, caption)
-        self.expose()
+        self.__configure_photo(upload_id, photo, caption)
+        self.__expose()
 
     @endpoint('upload/video/')
     def upload_video(self, video, thumbnail, caption=None, upload_id=None, is_sidecar=None):
+        uri = 'upload/video/'
+
         if upload_id is None:
             upload_id = util.generate_upload_id()
         data = {
@@ -82,7 +84,7 @@ class UploadAPI(BaseAPI):
             'User-Agent': constant.USER_AGENT,
         })
         response = self.session.post(
-            constant.API_URL + 'upload/video/',
+            constant.API_URL + uri,
             data=m.to_string()
         )
 
@@ -139,8 +141,8 @@ class UploadAPI(BaseAPI):
         if response.status_code != 200:
             raise UploadFailed()
 
-        self.configure_video(upload_id, video, thumbnail, caption)
-        self.expose()
+        self.__configure_video(upload_id, video, thumbnail, caption)
+        self.__expose()
 
     @staticmethod
     def __throw_if_invalid_usertags(usertags):
@@ -234,13 +236,13 @@ class UploadAPI(BaseAPI):
                 pass
             item['internalMetadata']['upload_id'] = item_upload_id
 
-        return self.configure_album(media, caption_text=caption)
+        return self.__configure_album(media, caption_text=caption)
 
     # --- configure ---
 
     @post('media/configure/')
-    def configure_photo(self, upload_id, photo, caption=''):
-        (w, h) = get_image_size(photo)
+    def __configure_photo(self, upload_id, photo, caption=''):
+        (w, h) = util.get_image_size(photo)
         return None, {
             'media_folder': 'Instagram',
             'source_type': 4,
@@ -259,7 +261,7 @@ class UploadAPI(BaseAPI):
         }
 
     @post('media/configure/?video=1')
-    def configure_video(self, upload_id, video, thumbnail, caption=''):
+    def __configure_video(self, upload_id, video, thumbnail, caption=''):
         clip = VideoFileClip(video)
         self.upload_photo(photo=thumbnail, caption=caption, upload_id=upload_id)
         return None, {
@@ -287,7 +289,7 @@ class UploadAPI(BaseAPI):
         }
 
     @post('media/configure_sidecar/')
-    def configure_album(self, media, caption_text=''):
+    def __configure_album(self, media, caption_text=''):
         album_upload_id = util.generate_upload_id()
 
         date = datetime.utcnow().isoformat()
@@ -355,7 +357,7 @@ class UploadAPI(BaseAPI):
         }
 
     @post('qe/expose/')
-    def expose(self):
+    def __expose(self):
         return None, {
             'id': self.user_id,
             'experiment': 'ig_android_profile_contextual_feed',

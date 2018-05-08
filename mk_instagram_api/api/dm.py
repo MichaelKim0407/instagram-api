@@ -7,16 +7,20 @@ __author__ = 'Michael'
 
 class MessagingAPI(BaseAPI):
     @get('direct_v2/inbox/')
-    def get_v2_inbox(self):
+    def dm_get_inbox(self):
         pass
 
     @get('direct_v2/threads/{thread}')
-    def get_v2_threads(self, thread, cursor=None):
+    def dm_get_thread(self, thread, cursor=None):
         return {
                    'thread': thread,
                }, {
                    'cursor': cursor,
                }
+
+    @get('direct_share/inbox/')
+    def dm_get_share(self):
+        pass
 
     @staticmethod
     def __build_body(bodies, boundary):
@@ -37,11 +41,12 @@ class MessagingAPI(BaseAPI):
         return body
 
     @endpoint('direct_v2/threads/broadcast/text/')
-    def direct_message(self, text, recipients):
+    def dm_send_text(self, text, recipients):
+        uri = 'direct_v2/threads/broadcast/text/'
+
         if not isinstance(recipients, list):
             recipients = [str(recipients)]
         recipient_users = '"",""'.join(str(r) for r in recipients)
-        endpoint = 'direct_v2/threads/broadcast/text/'
         boundary = self.uuid
         bodies = [
             {
@@ -76,7 +81,7 @@ class MessagingAPI(BaseAPI):
         })
         # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
         response = self.session.post(
-            constant.API_URL + endpoint,
+            constant.API_URL + uri,
             data=data
         )
 
@@ -87,11 +92,12 @@ class MessagingAPI(BaseAPI):
         raise ResponseError(response.status_code, response)
 
     @endpoint('direct_v2/threads/broadcast/media_share/?media_type=photo')
-    def direct_share(self, media_id, recipients, text=None):
+    def dm_send_share(self, media_id, recipients, text=None):
+        uri = 'direct_v2/threads/broadcast/media_share/?media_type=photo'
+
         if not isinstance(recipients, list):
             recipients = [str(recipients)]
         recipient_users = '"",""'.join(str(r) for r in recipients)
-        endpoint = 'direct_v2/threads/broadcast/media_share/?media_type=photo'
         boundary = self.uuid
         bodies = [
             {
@@ -131,7 +137,7 @@ class MessagingAPI(BaseAPI):
         })
         # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
         response = self.session.post(
-            constant.API_URL + endpoint,
+            constant.API_URL + uri,
             data=data
         )
 

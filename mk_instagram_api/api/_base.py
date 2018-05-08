@@ -26,8 +26,9 @@ class endpoint(object):
 
 
 class get(endpoint):
-    def __init__(self, uri, ranked=False):
+    def __init__(self, uri, require_login=True, ranked=False):
         super().__init__(uri)
+        self.require_login = require_login
         self.ranked = ranked
 
     def __call__(self, method):
@@ -57,12 +58,19 @@ class get(endpoint):
                         continue
                     uri += '{}={}&'.format(key, val)
 
-            return _self.send_request(uri)
+            return _self.send_request(
+                uri,
+                require_login=self.require_login
+            )
 
         return __new_method
 
 
 class post(endpoint):
+    def __init__(self, uri, require_login=True):
+        super().__init__(uri)
+        self.require_login = require_login
+
     def __call__(self, method):
         def __new_method(_self: 'BaseAPI', *args, **kwargs):
             result = method(_self, *args, **kwargs)
@@ -85,7 +93,8 @@ class post(endpoint):
 
             return _self.send_request(
                 uri,
-                util.generate_signature(json.dumps(data))
+                data=util.generate_signature(json.dumps(data)),
+                require_login=self.require_login
             )
 
         return __new_method
@@ -160,10 +169,10 @@ class BaseAPI(object):
             }
             self.session.proxies.update(proxies)
 
-    def send_request(self, endpoint, data=None, login=False):
+    def send_request(self, uri, data=None, require_login=True):
         verify = False  # don't show request warning
 
-        if not self.is_logged_in and not login:
+        if not self.is_logged_in and require_login:
             raise RequireLogin()
 
         self.session.headers.update({
@@ -182,13 +191,13 @@ class BaseAPI(object):
 
                 if data is not None:
                     response = self.session.post(
-                        constant.API_URL + endpoint,
+                        constant.API_URL + uri,
                         data=data,
                         verify=verify
                     )
                 else:
                     response = self.session.get(
-                        constant.API_URL + endpoint,
+                        constant.API_URL + uri,
                         verify=verify
                     )
 
@@ -199,30 +208,33 @@ class BaseAPI(object):
                 if retry_times >= self.retry_times:
                     raise
                 logger.warning('Endpoint: {}; Response code: {}; retrying #{}...'.format(
-                    endpoint,
+                    uri,
                     e.status_code,
                     retry_times
                 ))
                 time.sleep(self.retry_interval)
 
-    def login(self, force=False):
-        if self.is_logged_in and not force:
-            return
+    def __get_csrftoken(self):
+        return self.last_response.cookies['csrftoken']
 
-        guid = util.generate_uuid(False)
-        self.send_request(
-            'si/fetch_headers/'
-            '?challenge_type=signup'
-            '&guid={}'.format(
-                guid
-            ),
-            None,
-            True
-        )
+    @get('si/fetch_headers/', require_login=False)
+    def __fetch_headers(self, guid=None):
+        if guid is None:
+            guid = util.generate_uuid(False)
+        return None, {
+            'challenge_type': 'signup',
+            'guid': guid,
+        }
 
-        data = {
-            'phone_id': util.generate_uuid(),
-            '_csrftoken': self.last_response.cookies['csrftoken'],
+    @post('accounts/login/', require_login=False)
+    def __login(self, phone_id=None, csrftoken=None):
+        if phone_id is None:
+            phone_id = util.generate_uuid()
+        if csrftoken is None:
+            csrftoken = self.__get_csrftoken()
+        return None, {
+            'phone_id': phone_id,
+            '_csrftoken': csrftoken,
             'username': self.username,
             'guid': self.uuid,
             'device_id': self.device_id,
@@ -230,18 +242,28 @@ class BaseAPI(object):
             'login_attempt_count': '0',
         }
 
-        result = self.send_request(
-            'accounts/login/',
-            util.generate_signature(json.dumps(data)),
-            True
-        )
+    def login(self, force=False):
+        if self.is_logged_in and not force:
+            return
+
+        self.__fetch_headers()
+
+        result = self.__login()
+
         self.is_logged_in = True
         self.user_id = result["logged_in_user"]["pk"]
         self.rank_token = self.__generate_rank_token()
         self.token = self.last_response.cookies["csrftoken"]
+        logger.info("Logged in as [{}] {}".format(self.user_id, self.username))
 
-        logger.info("Login success!")
+        return result
 
     @get('accounts/logout/')
+    def __logout(self):
+        pass
+
     def logout(self):
+        result = self.__logout()
         self.is_logged_in = False
+        logger.info("Logged out")
+        return result
