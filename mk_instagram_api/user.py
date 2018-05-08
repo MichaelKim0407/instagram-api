@@ -1,4 +1,4 @@
-from . import get_api
+from . import get_api, big_list
 
 __author__ = 'Michael'
 
@@ -44,6 +44,25 @@ class User(object):
     def attributes_available(self):
         self.update_info()
         return sorted(self.__kwargs.keys())
+
+    def relationship(self):
+        return self.api.friends_get_user_relationships(self.user_id)
+
+    @big_list()
+    def followings_iter(self, max_id):
+        for user in self.api.friends_get_followings(self.user_id, max_id)['users']:
+            yield User(**user, api=self.api)
+
+    def followings(self):
+        return list(self.followings_iter())
+
+    @big_list()
+    def followers_iter(self, max_id):
+        for user in self.api.friends_get_followers(self.user_id, max_id)['users']:
+            yield User(**user, api=self.api)
+
+    def followers(self):
+        return list(self.followers_iter())
 
 
 class LoggedInUser(User):

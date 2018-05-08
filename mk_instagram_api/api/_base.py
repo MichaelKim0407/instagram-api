@@ -112,6 +112,7 @@ class BaseAPI(object):
 
         self.session = requests.Session()
         self.last_response = None
+        self.last_json = None
         self.rank_token = None
         self.token = None
 
@@ -132,10 +133,12 @@ class BaseAPI(object):
 
     def __handle_response(self, response):
         if response.status_code == 200:
-            self.last_response = response
             result = json.loads(response.text)
             if result['status'] != 'ok':
                 raise ResponseError(200, response)
+
+            self.last_response = response
+            self.last_json = result
             return result
 
         try:
