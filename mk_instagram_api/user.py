@@ -69,6 +69,24 @@ class User(object):
     def followers(self) -> List['User']:
         return list(self.followers_iter())
 
+    def follow(self, follow=True):
+        if follow:
+            self.api.friends_follow(self.user_id)
+        else:
+            self.api.friends_unfollow(self.user_id)
+
+    def block(self, block=True):
+        if block:
+            self.api.friends_block(self.user_id)
+        else:
+            self.api.friends_unblock(self.user_id)
+
+    def approve(self, approve=True):
+        if approve:
+            self.api.friends_approve_request(self.user_id)
+        else:
+            self.api.friends_ignore_request(self.user_id)
+
 
 class LoggedInUser(User):
     __instances: Dict[InstagramAPI, 'LoggedInUser'] = {}
@@ -93,3 +111,11 @@ class LoggedInUser(User):
     @staticmethod
     def get_by_name(username: str, api: InstagramAPI = None):
         raise TypeError('Access this method through User class')
+
+    @big_list()
+    def friend_requests_iter(self, max_id) -> Iterable[User]:
+        for user in self.api.friend_get_requests(max_id)['users']:
+            yield User(**user, api=self.api)
+
+    def friend_requests(self) -> List[User]:
+        return list(self.friend_requests_iter())

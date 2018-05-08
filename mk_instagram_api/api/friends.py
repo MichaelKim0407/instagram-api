@@ -48,8 +48,10 @@ class FriendsAPI(BaseAPI):
     # --- requests ---
 
     @get('friendships/pending')
-    def friends_get_requests(self):
-        pass
+    def friend_get_requests(self, max_id=None):
+        return None, {
+            'max_id': max_id,
+        }
 
     @post('friendships/approve/{user_id}/')
     def friends_approve_request(self, user_id):
