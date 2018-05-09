@@ -1,7 +1,8 @@
 from typing import List, Iterable, Dict
 
-from . import get_api, big_list
+from ._global import get_api
 from .api import InstagramAPI
+from .util import big_list
 
 __author__ = 'Michael'
 
