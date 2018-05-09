@@ -1,5 +1,6 @@
 from typing import List, Iterable, Dict
 
+from ._base import BaseObject
 from ._global import get_api
 from .api import InstagramAPI
 from .util import big_list
@@ -7,18 +8,15 @@ from .util import big_list
 __author__ = 'Michael'
 
 
-class User(object):
+class User(BaseObject):
     def __init__(self, pk: int, username: str, api: InstagramAPI = None, **kwargs):
-        self.api: InstagramAPI = get_api(api)
+        super().__init__(api, **kwargs)
 
         self.user_id: int = pk
         self.username: str = username
-        self.__kwargs = kwargs
-
-        self.__updated = False
 
     def __repr__(self):
-        return "User [{}] '{}'".format(self.user_id, self.username)
+        return super().__repr__() + " [{}] '{}'".format(self.user_id, self.username)
 
     @staticmethod
     def get_by_id(user_id: int, api: InstagramAPI = None) -> 'User':
@@ -45,24 +43,10 @@ class User(object):
     def search(value: str, fb=False, api: InstagramAPI = None) -> List['User']:
         return list(User.search_iter(value, fb, api))
 
-    def update_info(self, force: bool = False) -> 'User':
-        if self.__updated and not force:
-            return self
-
-        user = self.get_by_id(self.user_id, self.api)
-        self.username = user.username
-        self.__kwargs.update(user.__kwargs)
-        self.__updated = True
-        return self
-
-    def __getitem__(self, item: str):
-        if item not in self.__kwargs:
-            self.update_info()
-        return self.__kwargs[item]
-
-    def attributes_available(self) -> List[str]:
-        self.update_info()
-        return sorted(self.__kwargs.keys())
+    def _update_info(self):
+        new = User.get_by_id(self.user_id, self.api)
+        self.username = new.username
+        return new
 
     def relationship(self) -> Dict[str, bool]:
         result = self.api.friends_get_user_relationships(self.user_id)
