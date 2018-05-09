@@ -119,3 +119,9 @@ class LoggedInUser(User):
 
     def friend_requests(self) -> List[User]:
         return list(self.friend_requests_iter())
+
+    def set_private(self, private=False):
+        if private:
+            self.api.profile_set_private()
+        else:
+            self.api.profile_set_public()
