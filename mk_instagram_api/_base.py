@@ -29,6 +29,9 @@ class BaseObject(object):
         self.__kwargs.update(new.__kwargs)
         self.__updated = True
 
+    def __contains__(self, item):
+        return item in self.__kwargs
+
     def __getitem__(self, item: str):
         if item not in self.__kwargs:
             self.update_info()
@@ -37,3 +40,18 @@ class BaseObject(object):
     def attributes_available(self) -> List[str]:
         self.update_info()
         return sorted(self.__kwargs.keys())
+
+    @classmethod
+    def cast_kwargs(cls, kwargs, *keys, api: InstagramAPI = None):
+        keys = list(keys)
+        while keys:
+            key = keys[0]
+            if key not in kwargs:
+                return
+            if not isinstance(kwargs[key], dict):
+                return
+            if len(keys) == 1:
+                kwargs[key] = cls(**kwargs[key], api=api)
+                return
+            kwargs = kwargs[key]
+            keys.pop(0)

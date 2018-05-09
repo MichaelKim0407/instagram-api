@@ -63,7 +63,7 @@ class User(BaseObject):
         return self.__followings_iter(self.api, limit=limit, user_id=self.user_id)
 
     def followings(self, limit=None) -> List['User']:
-        return list(self.followings_iter(limit=limit))
+        return list(self.followings_iter(limit))
 
     @staticmethod
     @big_list()
@@ -75,7 +75,7 @@ class User(BaseObject):
         return self.__followers_iter(self.api, limit=limit, user_id=self.user_id)
 
     def followers(self, limit=None) -> List['User']:
-        return list(self.followers_iter(limit=limit))
+        return list(self.followers_iter(limit))
 
     def follow(self, follow=True):
         if follow:
@@ -94,6 +94,21 @@ class User(BaseObject):
             self.api.friends_approve_request(self.user_id)
         else:
             self.api.friends_ignore_request(self.user_id)
+
+    @staticmethod
+    @big_list(big_key='more_available')
+    def __posts_iter(api: InstagramAPI, user_id, max_id, min_timestamp=None):
+        for item in api.posts_by_user(user_id, max_id, min_timestamp)['items']:
+            yield Post(**item)
+
+    def posts_iter(self, min_timestamp=None, limit=None) -> Iterable['Post']:
+        return self.__posts_iter(
+            self.api, limit=limit,
+            user_id=self.user_id, min_timestamp=min_timestamp
+        )
+
+    def posts(self, min_timestamp=None, limit=None) -> List['Post']:
+        return list(self.posts_iter(min_timestamp, limit))
 
 
 class LoggedInUser(User):
@@ -142,10 +157,13 @@ class LoggedInUser(User):
         return self.__friend_requests_iter(self.api, limit=limit)
 
     def friend_requests(self, limit=None) -> List[User]:
-        return list(self.friend_requests_iter(limit=limit))
+        return list(self.friend_requests_iter(limit))
 
     def set_private(self, private=False):
         if private:
             self.api.profile_set_private()
         else:
             self.api.profile_set_public()
+
+
+from .post import Post
