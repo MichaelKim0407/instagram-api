@@ -2,16 +2,32 @@ __author__ = 'Michael'
 
 
 class ResponseError(Exception):
-    def __init__(self, status_code, response):
-        self.status_code = status_code
+    def __init__(self, response):
+        self.status_code = response.status_code
         self.response = response
-        super().__init__(
-            'Request failed with code {}'.format(status_code)
-        )
+        super().__init__(self._text())
+
+    def _text(self):
+        if self.status_code == 404:
+            return '404: The item you are requesting does not exist'
+        return 'Request failed with code {}'.format(self.status_code)
+
+    def should_retry(self):
+        if 400 <= self.status_code < 500:
+            return False
+        return True
 
 
-class SentryBlockError(Exception):
-    pass
+class SentryBlockError(ResponseError):
+    def __init__(self, response, message):
+        self.message = message
+        super().__init__(response)
+
+    def _text(self):
+        return self.message
+
+    def should_retry(self):
+        return False
 
 
 class RequireLogin(Exception):

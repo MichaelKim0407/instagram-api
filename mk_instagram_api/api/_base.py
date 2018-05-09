@@ -132,26 +132,27 @@ class BaseAPI(object):
         )
 
     def __handle_response(self, response):
+        def __json():
+            try:
+                return json.loads(response.text)
+            except json.JSONDecodeError:
+                raise ResponseError(response)
+
         if response.status_code == 200:
-            result = json.loads(response.text)
+            result = __json()
             if result['status'] != 'ok':
-                raise ResponseError(200, response)
+                raise ResponseError(response)
 
             self.last_response = response
             self.last_json = result
             return result
 
-        try:
-            # check for sentry block
-            result = json.loads(response.text)
-            if 'error_type' in result and result['error_type'] == 'sentry_block':
-                raise SentryBlockError(result['message'])
-        except SentryBlockError:
-            raise
-        except Exception:
-            pass
+        # check for sentry block
+        result = __json()
+        if 'error_type' in result and result['error_type'] == 'sentry_block':
+            raise SentryBlockError(response, result['message'])
 
-        raise ResponseError(response.status_code, response)
+        raise ResponseError(response)
 
     def configure_retry(self, retry=None, retry_times=None, retry_interval=None):
         if retry is not None:
@@ -209,6 +210,8 @@ class BaseAPI(object):
 
                 return self.__handle_response(response)
             except ResponseError as e:
+                if not e.should_retry():
+                    raise
                 if not self.retry:
                     raise
                 if retry_times >= self.retry_times:
