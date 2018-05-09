@@ -29,6 +29,21 @@ class User(object):
         api = get_api(api)
         return User(**api.user_get_info_by_username(username)['user'], api=api)
 
+    @staticmethod
+    def search_iter(value: str, fb=False, api: InstagramAPI = None) -> Iterable['User']:
+        # TODO 'has_more' in result without 'next_max_id'
+        api = get_api(api)
+        if fb:
+            for user in api.user_search_fb(value)['users']:
+                yield User(**user['user'], api=api)
+        else:
+            for user in api.user_search(value)['users']:
+                yield User(**user, api=api)
+
+    @staticmethod
+    def search(value: str, fb=False, api: InstagramAPI = None) -> List['User']:
+        return list(User.search_iter(value, fb, api))
+
     def update_info(self, force: bool = False) -> 'User':
         if self.__updated and not force:
             return self
@@ -89,6 +104,10 @@ class User(object):
 
 
 class LoggedInUser(User):
+    class MethodAccessError(Exception):
+        def __init__(self):
+            super().__init__('Access this method through User class')
+
     __instances: Dict[InstagramAPI, 'LoggedInUser'] = {}
 
     def __init__(self, api: InstagramAPI = None):
@@ -106,11 +125,19 @@ class LoggedInUser(User):
 
     @staticmethod
     def get_by_id(user_id: int, api: InstagramAPI = None):
-        raise TypeError('Access this method through User class')
+        raise LoggedInUser.MethodAccessError()
 
     @staticmethod
     def get_by_name(username: str, api: InstagramAPI = None):
-        raise TypeError('Access this method through User class')
+        raise LoggedInUser.MethodAccessError()
+
+    @staticmethod
+    def search_iter(value: str, fb=False, api: InstagramAPI = None):
+        raise LoggedInUser.MethodAccessError()
+
+    @staticmethod
+    def search(value: str, fb=False, api: InstagramAPI = None):
+        raise LoggedInUser.MethodAccessError()
 
     @big_list()
     def friend_requests_iter(self, max_id) -> Iterable[User]:
