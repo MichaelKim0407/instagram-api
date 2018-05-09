@@ -33,6 +33,9 @@ class BaseObject(object):
         return item in self.__kwargs
 
     def __getitem__(self, item: str):
+        if isinstance(item, slice):
+            # self[:] returns full kwargs (for debugging)
+            return self.__kwargs
         if item not in self.__kwargs:
             self.update_info()
         return self.__kwargs[item]
