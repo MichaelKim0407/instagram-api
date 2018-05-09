@@ -46,15 +46,19 @@ class BaseObject(object):
 
     @classmethod
     def cast_kwargs(cls, kwargs, *keys, api: InstagramAPI = None):
-        keys = list(keys)
-        while keys:
-            key = keys[0]
-            if key not in kwargs:
-                return
-            if not isinstance(kwargs[key], dict):
-                return
-            if len(keys) == 1:
-                kwargs[key] = cls(**kwargs[key], api=api)
-                return
-            kwargs = kwargs[key]
-            keys.pop(0)
+        if not keys:
+            if isinstance(kwargs, dict):
+                return cls(**kwargs, api=api)
+            elif isinstance(kwargs, list):
+                return [cls.cast_kwargs(item, api=api) for item in kwargs]
+            else:
+                return kwargs
+
+        if not isinstance(kwargs, dict):
+            return kwargs
+
+        key = keys[0]
+        if key not in kwargs:
+            return kwargs
+        kwargs[key] = cls.cast_kwargs(kwargs[key], *keys[1:], api=api)
+        return kwargs

@@ -6,9 +6,19 @@ __author__ = 'Michael'
 
 
 class Post(BaseObject):
+    PHOTO = 1
+    VIDEO = 2
+    ALBUM = 8
+    POST_TYPE = {
+        PHOTO: 'photo',
+        VIDEO: 'video',
+        ALBUM: 'album',
+    }
+
     def __init__(self, pk: int, id: str, api: InstagramAPI = None, **kwargs):
-        User.cast_kwargs(kwargs, 'user', api=api)
-        User.cast_kwargs(kwargs, 'caption', 'user', api=api)
+        kwargs = User.cast_kwargs(kwargs, 'user', api=api)
+        kwargs = User.cast_kwargs(kwargs, 'caption', 'user', api=api)
+        kwargs = Post.cast_kwargs(kwargs, 'carousel_media')
 
         super().__init__(api, **kwargs)
 
@@ -30,6 +40,14 @@ class Post(BaseObject):
         new = Post.get_by_id(self.pk, self.api)
         self.id = new.id
         return new
+
+    def type(self):
+        return self.POST_TYPE[self['media_type']]
+
+    def album(self) -> 'Post':
+        if 'carousel_parent_id' not in self:
+            return self
+        return Post.get_by_id(self['carousel_parent_id'])
 
     def caption(self):
         if self['caption'] is None:
