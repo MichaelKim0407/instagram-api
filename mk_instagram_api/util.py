@@ -7,13 +7,19 @@ class big_list(object):
         self.next_key = next_key
 
     def __call__(self, method):
-        def __new_method(_self, **kwargs):
+        def __new_method(api, limit=None, **kwargs):
+            count = 0
             max_id = None
             while True:
-                for i in method(_self, **kwargs, max_id=max_id):
+                for i in method(api, **kwargs, max_id=max_id):
                     yield i
-                if not _self.api.last_json[self.big_key]:
+                    count += 1
+                if limit is not None and count >= limit:
+                    # we do not want to leave out part of the response
+                    # so the actual count can go over limit
                     break
-                max_id = _self.api.last_json[self.next_key]
+                if not api.last_json[self.big_key]:
+                    break
+                max_id = api.last_json[self.next_key]
 
         return __new_method

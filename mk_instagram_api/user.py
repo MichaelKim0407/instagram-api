@@ -69,21 +69,29 @@ class User(object):
         del result['status']
         return result
 
+    @staticmethod
     @big_list()
-    def followings_iter(self, max_id) -> Iterable['User']:
-        for user in self.api.friends_get_followings(self.user_id, max_id)['users']:
-            yield User(**user, api=self.api)
+    def __followings_iter(api: InstagramAPI, user_id, max_id):
+        for user in api.friends_get_followings(user_id, max_id)['users']:
+            yield User(**user, api=api)
 
-    def followings(self) -> List['User']:
-        return list(self.followings_iter())
+    def followings_iter(self, limit=None) -> Iterable['User']:
+        return self.__followings_iter(self.api, limit=limit, user_id=self.user_id)
 
+    def followings(self, limit=None) -> List['User']:
+        return list(self.followings_iter(limit=limit))
+
+    @staticmethod
     @big_list()
-    def followers_iter(self, max_id) -> Iterable['User']:
-        for user in self.api.friends_get_followers(self.user_id, max_id)['users']:
-            yield User(**user, api=self.api)
+    def __followers_iter(api: InstagramAPI, user_id, max_id):
+        for user in api.friends_get_followers(user_id, max_id)['users']:
+            yield User(**user, api=api)
 
-    def followers(self) -> List['User']:
-        return list(self.followers_iter())
+    def followers_iter(self, limit=None) -> Iterable['User']:
+        return self.__followers_iter(self.api, limit=limit, user_id=self.user_id)
+
+    def followers(self, limit=None) -> List['User']:
+        return list(self.followers_iter(limit=limit))
 
     def follow(self, follow=True):
         if follow:
@@ -140,13 +148,17 @@ class LoggedInUser(User):
     def search(value: str, fb=False, api: InstagramAPI = None):
         raise LoggedInUser.MethodAccessError()
 
+    @staticmethod
     @big_list()
-    def friend_requests_iter(self, max_id) -> Iterable[User]:
-        for user in self.api.friend_get_requests(max_id)['users']:
-            yield User(**user, api=self.api)
+    def __friend_requests_iter(api: InstagramAPI, max_id):
+        for user in api.friend_get_requests(max_id)['users']:
+            yield User(**user, api=api)
 
-    def friend_requests(self) -> List[User]:
-        return list(self.friend_requests_iter())
+    def friend_requests_iter(self, limit=None) -> Iterable[User]:
+        return self.__friend_requests_iter(self.api, limit=limit)
+
+    def friend_requests(self, limit=None) -> List[User]:
+        return list(self.friend_requests_iter(limit=limit))
 
     def set_private(self, private=False):
         if private:
