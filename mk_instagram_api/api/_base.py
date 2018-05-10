@@ -3,6 +3,7 @@ import time
 import copy
 import json
 import logging
+import random
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from typing import ContextManager
@@ -129,7 +130,11 @@ class BaseAPI(object):
 
         self.retry = True
         self.retry_times = 3
-        self.retry_interval = 5  # seconds
+        self.retry_interval = 1  # seconds
+
+        self.random_wait = True
+        self.min_wait = 0  # seconds
+        self.max_wait = 5  # seconds
 
     def __generate_device_id(self):
         return util.generate_device_id(
@@ -187,6 +192,14 @@ class BaseAPI(object):
         if retry_interval is not None:
             self.retry_interval = retry_interval
 
+    def configure_random_wait(self, random_wait=None, min_wait=None, max_wait=None):
+        if random_wait is not None:
+            self.random_wait = random_wait
+        if min_wait is not None:
+            self.min_wait = min_wait
+        if max_wait is not None:
+            self.max_wait = max_wait
+
     def set_proxy(self, proxy=None):
         """
         Set proxy for all requests::
@@ -201,7 +214,14 @@ class BaseAPI(object):
             }
             self.session.proxies.update(proxies)
 
-    def send_request(self, uri, data=None, require_login=True, raw_url=False):
+    def send_request(
+            self,
+            uri,
+            data=None,
+            require_login=True,
+            raw_url=False,
+            random_wait=True
+    ):
         verify = False  # don't show request warning
 
         if self.logged_in_user is None and require_login:
@@ -211,6 +231,11 @@ class BaseAPI(object):
             _url = uri
         else:
             _url = constant.API_URL + uri
+
+        if random_wait and self.random_wait:
+            wait = random.uniform(self.min_wait, self.max_wait)
+            logger.debug('Waiting for {}s...'.format(wait))
+            time.sleep(wait)
 
         retry_times = 0
         while True:
