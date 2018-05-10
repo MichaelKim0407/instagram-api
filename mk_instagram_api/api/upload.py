@@ -1,6 +1,5 @@
 import math
 
-import copy
 from datetime import datetime
 from requests_toolbelt import MultipartEncoder
 
@@ -36,20 +35,16 @@ class UploadAPI(BaseAPI):
         if is_sidecar:
             data['is_sidecar'] = '1'
         m = MultipartEncoder(data, boundary=self.uuid)
-        self.session.headers.update({
-            'X-IG-Capabilities': '3Q4=',
-            'X-IG-Connection-Type': 'WIFI',
-            'Cookie2': '$Version=1',
-            'Accept-Language': 'en-US',
+        with self._update_headers({
             'Accept-Encoding': 'gzip, deflate',
             'Content-type': m.content_type,
-            'Connection': 'close',
-            'User-Agent': constant.USER_AGENT,
-        })
-        response = self.session.post(
-            constant.API_URL + uri,
-            data=m.to_string()
-        )
+            'X-IG-Capabilities': '3Q4=',
+            'X-IG-Connection-Type': 'WIFI',
+        }):
+            response = self.session.post(
+                constant.API_URL + uri,
+                data=m.to_string()
+            )
 
         if response.status_code != 200:
             raise UploadFailed()
@@ -72,21 +67,18 @@ class UploadAPI(BaseAPI):
         if is_sidecar:
             data['is_sidecar'] = '1'
         m = MultipartEncoder(data, boundary=self.uuid)
-        self.session.headers.update({
+        with self._update_headers({
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Content-type': m.content_type,
+            'Host': 'i.instagram.com',
             'X-IG-Capabilities': '3Q4=',
             'X-IG-Connection-Type': 'WIFI',
-            'Host': 'i.instagram.com',
-            'Cookie2': '$Version=1',
-            'Accept-Language': 'en-US',
-            'Accept-Encoding': 'gzip, deflate',
-            'Content-type': m.content_type,
-            'Connection': 'keep-alive',
-            'User-Agent': constant.USER_AGENT,
-        })
-        response = self.session.post(
-            constant.API_URL + uri,
-            data=m.to_string()
-        )
+        }):
+            response = self.session.post(
+                constant.API_URL + uri,
+                data=m.to_string()
+            )
 
         if response.status_code != 200:
             raise UploadFailed()
@@ -100,46 +92,41 @@ class UploadAPI(BaseAPI):
         request_size = int(math.floor(len(video_data) / 4))
         last_request_extra = (len(video_data) - (request_size * 3))
 
-        headers = copy.deepcopy(self.session.headers)
-        self.session.headers.update({
-            'X-IG-Capabilities': '3Q4=',
-            'X-IG-Connection-Type': 'WIFI',
-            'Cookie2': '$Version=1',
-            'Accept-Language': 'en-US',
+        with self._update_headers({
             'Accept-Encoding': 'gzip, deflate',
-            'Content-type': 'application/octet-stream',
-            'Session-ID': upload_id,
             'Connection': 'keep-alive',
             'Content-Disposition': 'attachment; filename="video.mov"',
-            'job': upload_job,
+            'Content-type': 'application/octet-stream',
             'Host': 'upload.instagram.com',
-            'User-Agent': constant.USER_AGENT,
-        })
-        for i in range(0, 4):
-            start = i * request_size
-            if i == 3:
-                end = i * request_size + last_request_extra
-            else:
-                end = (i + 1) * request_size
-            length = last_request_extra if i == 3 else request_size
-            content_range = "bytes {start}-{end}/{lenVideo}".format(
-                start=start,
-                end=(end - 1),
-                lenVideo=len(video_data)
-            ).encode('utf-8')
+            'job': upload_job,
+            'Session-ID': upload_id,
+            'X-IG-Capabilities': '3Q4=',
+            'X-IG-Connection-Type': 'WIFI',
+        }):
+            for i in range(0, 4):
+                start = i * request_size
+                if i == 3:
+                    end = i * request_size + last_request_extra
+                else:
+                    end = (i + 1) * request_size
+                length = last_request_extra if i == 3 else request_size
+                content_range = "bytes {start}-{end}/{lenVideo}".format(
+                    start=start,
+                    end=(end - 1),
+                    lenVideo=len(video_data)
+                ).encode('utf-8')
 
-            self.session.headers.update({
-                'Content-Length': str(end - start),
-                'Content-Range': content_range,
-            })
-            response = self.session.post(
-                upload_url,
-                data=video_data[start:start + length]
-            )
-        self.session.headers = headers
+                with self._update_headers({
+                    'Content-Length': str(end - start),
+                    'Content-Range': content_range,
+                }):
+                    response = self.session.post(
+                        upload_url,
+                        data=video_data[start:start + length]
+                    )
 
-        if response.status_code != 200:
-            raise UploadFailed()
+                if response.status_code != 200:
+                    raise UploadFailed()
 
         self.__configure_video(upload_id, video, thumbnail, caption)
         self.__expose()

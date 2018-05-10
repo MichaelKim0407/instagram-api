@@ -71,25 +71,18 @@ class MessagingAPI(BaseAPI):
             },
         ]
         data = self.__build_body(bodies, boundary)
-        self.session.headers.update({
-            'User-Agent': constant.USER_AGENT,
-            'Proxy-Connection': 'keep-alive',
+        with self._update_headers({
             'Connection': 'keep-alive',
-            'Accept': '*/*',
             'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
-            'Accept-Language': 'en-en',
-        })
-        # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-        response = self.session.post(
-            constant.API_URL + uri,
-            data=data
-        )
+            'Proxy-Connection': 'keep-alive',
+        }):
+            # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
+            response = self.session.post(
+                constant.API_URL + uri,
+                data=data
+            )
 
-        if response.status_code == 200:
-            self.last_response = response
-            return json.loads(response.text)
-
-        raise ResponseError(response.status_code, response)
+        return self._handle_response(response)
 
     @endpoint('direct_v2/threads/broadcast/media_share/?media_type=photo')
     def dm_send_share(self, media_id, recipients, text=None):
@@ -127,18 +120,18 @@ class MessagingAPI(BaseAPI):
             },
         ]
         data = self.__build_body(bodies, boundary)
-        self.session.headers.update({
+        with self._update_headers({
             'User-Agent': constant.USER_AGENT,
             'Proxy-Connection': 'keep-alive',
             'Connection': 'keep-alive',
             'Accept': '*/*',
             'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
             'Accept-Language': 'en-en',
-        })
-        # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-        response = self.session.post(
-            constant.API_URL + uri,
-            data=data
-        )
+        }):
+            # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
+            response = self.session.post(
+                constant.API_URL + uri,
+                data=data
+            )
 
-        return self.__handle_response(response)
+        return self._handle_response(response)

@@ -1,9 +1,11 @@
 import time
 
+import copy
 import json
 import logging
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from typing import ContextManager
 
 from . import constant
 from . import util
@@ -111,6 +113,15 @@ class BaseAPI(object):
         self.user_id = None
 
         self.session = requests.Session()
+        self.session.headers = {
+            'Accept': '*/*',
+            'Accept-Language': 'en-US',
+            'Connection': 'close',
+            'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Cookie2': '$Version=1',
+            'User-Agent': constant.USER_AGENT,
+        }
+
         self.last_response = None
         self.last_json = None
         self.rank_token = None
@@ -131,7 +142,21 @@ class BaseAPI(object):
             self.uuid
         )
 
-    def __handle_response(self, response):
+    def _update_headers(self, headers) -> ContextManager:
+        class UpdateHeaders(object):
+            def __init__(_self):
+                _self.headers = headers
+                _self.old_headers = copy.deepcopy(self.session.headers)
+
+            def __enter__(_self):
+                self.session.headers.update(_self.headers)
+
+            def __exit__(_self, exc_type, exc_val, exc_tb):
+                self.session.headers = _self.old_headers
+
+        return UpdateHeaders()
+
+    def _handle_response(self, response):
         def __json():
             try:
                 return json.loads(response.text)
@@ -182,15 +207,6 @@ class BaseAPI(object):
         if self.logged_in_user is None and require_login:
             raise RequireLogin()
 
-        self.session.headers.update({
-            'Connection': 'close',
-            'Accept': '*/*',
-            'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Cookie2': '$Version=1',
-            'Accept-Language': 'en-US',
-            'User-Agent': constant.USER_AGENT,
-        })
-
         retry_times = 0
         while True:
             try:
@@ -208,7 +224,7 @@ class BaseAPI(object):
                         verify=verify
                     )
 
-                return self.__handle_response(response)
+                return self._handle_response(response)
             except ResponseError as e:
                 if not e.should_retry():
                     raise
