@@ -131,6 +131,11 @@ class LoggedInUser(User):
         else:
             return LoggedInUser(api)
 
+    def _update_info(self):
+        new = super()._update_info()
+        new[:].update(self.api.profile_get_data()['user'])
+        return new
+
     @staticmethod
     def get_by_id(user_id: int, api: InstagramAPI = None):
         raise LoggedInUser.MethodAccessError()

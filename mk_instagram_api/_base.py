@@ -28,6 +28,7 @@ class BaseObject(object):
         new = self._update_info()
         self.__kwargs.update(new.__kwargs)
         self.__updated = True
+        return self
 
     def __contains__(self, item):
         return item in self.__kwargs
