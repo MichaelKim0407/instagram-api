@@ -156,7 +156,7 @@ class BaseAPI(object):
 
         return UpdateHeaders()
 
-    def _handle_response(self, response):
+    def __handle_response(self, response):
         def __json():
             try:
                 return json.loads(response.text)
@@ -201,11 +201,16 @@ class BaseAPI(object):
             }
             self.session.proxies.update(proxies)
 
-    def send_request(self, uri, data=None, require_login=True):
+    def send_request(self, uri, data=None, require_login=True, raw_url=False):
         verify = False  # don't show request warning
 
         if self.logged_in_user is None and require_login:
             raise RequireLogin()
+
+        if raw_url:
+            _url = uri
+        else:
+            _url = constant.API_URL + uri
 
         retry_times = 0
         while True:
@@ -214,17 +219,17 @@ class BaseAPI(object):
 
                 if data is not None:
                     response = self.session.post(
-                        constant.API_URL + uri,
+                        _url,
                         data=data,
                         verify=verify
                     )
                 else:
                     response = self.session.get(
-                        constant.API_URL + uri,
+                        _url,
                         verify=verify
                     )
 
-                return self._handle_response(response)
+                return self.__handle_response(response)
             except ResponseError as e:
                 if not e.should_retry():
                     raise

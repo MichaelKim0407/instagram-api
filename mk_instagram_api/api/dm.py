@@ -71,18 +71,16 @@ class MessagingAPI(BaseAPI):
             },
         ]
         data = self.__build_body(bodies, boundary)
+
         with self._update_headers({
             'Connection': 'keep-alive',
             'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
             'Proxy-Connection': 'keep-alive',
         }):
-            # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-            response = self.session.post(
-                constant.API_URL + uri,
+            return self.send_request(
+                uri,
                 data=data
             )
-
-        return self._handle_response(response)
 
     @endpoint('direct_v2/threads/broadcast/media_share/?media_type=photo')
     def dm_send_share(self, media_id, recipients, text=None):
@@ -120,6 +118,7 @@ class MessagingAPI(BaseAPI):
             },
         ]
         data = self.__build_body(bodies, boundary)
+
         with self._update_headers({
             'User-Agent': constant.USER_AGENT,
             'Proxy-Connection': 'keep-alive',
@@ -128,10 +127,7 @@ class MessagingAPI(BaseAPI):
             'Content-Type': 'multipart/form-data; boundary={}'.format(boundary),
             'Accept-Language': 'en-en',
         }):
-            # self.SendRequest(endpoint,post=data) #overwrites 'Content-type' header and boundary is missed
-            response = self.session.post(
-                constant.API_URL + uri,
+            return self.send_request(
+                uri,
                 data=data
             )
-
-        return self._handle_response(response)

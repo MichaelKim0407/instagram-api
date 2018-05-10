@@ -41,13 +41,10 @@ class UploadAPI(BaseAPI):
             'X-IG-Capabilities': '3Q4=',
             'X-IG-Connection-Type': 'WIFI',
         }):
-            response = self.session.post(
-                constant.API_URL + uri,
+            self.send_request(
+                uri,
                 data=m.to_string()
             )
-
-        if response.status_code != 200:
-            raise UploadFailed()
 
         self.__configure_photo(upload_id, photo, caption)
         self.__expose()
@@ -75,17 +72,13 @@ class UploadAPI(BaseAPI):
             'X-IG-Capabilities': '3Q4=',
             'X-IG-Connection-Type': 'WIFI',
         }):
-            response = self.session.post(
-                constant.API_URL + uri,
+            result = self.send_request(
+                uri,
                 data=m.to_string()
             )
 
-        if response.status_code != 200:
-            raise UploadFailed()
-
-        body = json.loads(response.text)
-        upload_url = body['video_upload_urls'][3]['url']
-        upload_job = body['video_upload_urls'][3]['job']
+        upload_url = result['video_upload_urls'][3]['url']
+        upload_job = result['video_upload_urls'][3]['job']
 
         video_data = open(video, 'rb').read()
         # solve issue #85 TypeError: slice indices must be integers or None or have an __index__ method
@@ -120,13 +113,11 @@ class UploadAPI(BaseAPI):
                     'Content-Length': str(end - start),
                     'Content-Range': content_range,
                 }):
-                    response = self.session.post(
+                    self.send_request(
                         upload_url,
-                        data=video_data[start:start + length]
+                        data=video_data[start:start + length],
+                        raw_url=True
                     )
-
-                if response.status_code != 200:
-                    raise UploadFailed()
 
         self.__configure_video(upload_id, video, thumbnail, caption)
         self.__expose()

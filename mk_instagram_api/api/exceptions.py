@@ -35,10 +35,6 @@ class RequireLogin(Exception):
         super().__init__('Not logged in!')
 
 
-class UploadFailed(Exception):
-    pass
-
-
 class AlbumSizeError(Exception):
     def __init__(self, size):
         self.size = size
