@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class FriendsAPI(BaseAPI):
+class FriendsAPI(LoginAPI):
     @get('friendships/autocomplete_user_list/')
     def friends_autocomplete(self):
         pass

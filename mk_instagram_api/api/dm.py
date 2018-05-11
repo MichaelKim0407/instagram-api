@@ -5,7 +5,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class MessagingAPI(BaseAPI):
+class MessagingAPI(LoginAPI):
     @get('direct_v2/inbox/')
     def dm_get_inbox(self):
         pass

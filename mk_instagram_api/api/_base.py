@@ -46,17 +46,18 @@ class get(endpoint):
             if uri_params:
                 uri = self.uri.format(**uri_params)
 
-            if not params:
-                params = {}
+            _params = {}
             if self.ranked:
-                params.update({
+                _params.update({
                     'ranked_content': 'true',
                     'rank_token': _self.rank_token,
                 })
-
             if params:
+                _params.update(params)
+
+            if _params:
                 uri += '?'
-                for key, val in params.items():
+                for key, val in _params.items():
                     if val is None:
                         continue
                     uri += '{}={}&'.format(key, val)
@@ -86,17 +87,21 @@ class post(endpoint):
             if uri_params:
                 uri = self.uri.format(**uri_params)
 
-            if not data:
-                data = {}
-            data.update({
+            _data = {
                 '_uuid': _self.uuid,
-                '_uid': _self.user_id,
-                '_csrftoken': _self.token,
-            })
+            }
+            csrftoken = _self.get_csrftoken()
+            if csrftoken is not None:
+                _data['_csrftoken'] = csrftoken
+            if _self.user_id is not None:
+                _data['_uid'] = _self.user_id
+
+            if data:
+                _data.update(data)
 
             return _self.send_request(
                 uri,
-                data=util.generate_signature(json.dumps(data)),
+                data=util.generate_signature(json.dumps(_data)),
                 require_login=self.require_login
             )
 
@@ -104,14 +109,12 @@ class post(endpoint):
 
 
 class BaseAPI(object):
-    def __init__(self, username, password):
-        self.username = username
-        self.password = password
-        self.device_id = self.__generate_device_id()
-        self.uuid = util.generate_uuid()
-
+    def __init__(self):
         self.logged_in_user = None
         self.user_id = None
+        self.rank_token = None
+        self.csrftoken = None
+        self.uuid = util.generate_uuid()
 
         self.session = requests.Session()
         self.session.headers = {
@@ -125,27 +128,14 @@ class BaseAPI(object):
 
         self.last_response = None
         self.last_json = None
-        self.rank_token = None
-        self.token = None
 
         self.retry = True
         self.retry_times = 3
         self.retry_interval = 1  # seconds
 
-        self.random_wait = True
+        self.random_wait = False
         self.min_wait = 0  # seconds
         self.max_wait = 5  # seconds
-
-    def __generate_device_id(self):
-        return util.generate_device_id(
-            util.md5_hash(self.username.encode('utf-8') + self.password.encode('utf-8'))
-        )
-
-    def __generate_rank_token(self):
-        return "{}_{}".format(
-            self.user_id,
-            self.uuid
-        )
 
     def _update_headers(self, headers) -> ContextManager:
         class UpdateHeaders(object):
@@ -269,8 +259,32 @@ class BaseAPI(object):
                 ))
                 time.sleep(self.retry_interval)
 
-    def __get_csrftoken(self):
+    def get_csrftoken(self):
+        if self.csrftoken is not None:
+            return self.csrftoken
+        if self.last_response is None:
+            return None
         return self.last_response.cookies['csrftoken']
+
+
+class LoginAPI(BaseAPI):
+    def __init__(self, username, password):
+        super().__init__()
+
+        self.username = username
+        self.password = password
+        self.device_id = self.__generate_device_id()
+
+    def __generate_device_id(self):
+        return util.generate_device_id(
+            util.md5_hash(self.username.encode('utf-8') + self.password.encode('utf-8'))
+        )
+
+    def __generate_rank_token(self):
+        return "{}_{}".format(
+            self.user_id,
+            self.uuid
+        )
 
     @get('si/fetch_headers/', require_login=False)
     def __fetch_headers(self, guid=None):
@@ -281,12 +295,18 @@ class BaseAPI(object):
             'guid': guid,
         }
 
+    def __pre_login(self):
+        try:
+            self.__fetch_headers()
+        except Exception as e:
+            logger.warning(e)
+
     @post('accounts/login/', require_login=False)
     def __login(self, phone_id=None, csrftoken=None):
         if phone_id is None:
             phone_id = util.generate_uuid()
         if csrftoken is None:
-            csrftoken = self.__get_csrftoken()
+            csrftoken = self.get_csrftoken()
         return None, {
             'phone_id': phone_id,
             '_csrftoken': csrftoken,
@@ -297,19 +317,47 @@ class BaseAPI(object):
             'login_attempt_count': '0',
         }
 
+    def __post_login(self: 'InstagramAPI'):
+        """
+        This is to simulate the actions a real app would do after login.
+        Removing these actions may results in Instagram detecting you as fake,
+        and blocking you using this api.
+        """
+        try:
+            self.sync_features()
+        except Exception as e:
+            logger.warning(e)
+        try:
+            self.friends_autocomplete()
+        except Exception as e:
+            logger.warning(e)
+        try:
+            self.posts_feed()
+        except Exception as e:
+            logger.warning(e)
+        try:
+            self.dm_get_inbox()
+        except Exception as e:
+            logger.warning(e)
+        try:
+            self.activities_for_me()
+        except Exception as e:
+            logger.warning(e)
+
     def login(self, force=False):
         if self.logged_in_user is not None and not force:
             return
 
-        self.__fetch_headers()
+        self.__pre_login()
 
         result = self.__login()
-
         self.logged_in_user = result['logged_in_user']
         self.user_id = self.logged_in_user['pk']
         self.rank_token = self.__generate_rank_token()
-        self.token = self.last_response.cookies["csrftoken"]
+        self.csrftoken = self.get_csrftoken()
         logger.info("Logged in as [{}] {}".format(self.user_id, self.username))
+
+        self.__post_login()
 
         return result
 
@@ -321,5 +369,7 @@ class BaseAPI(object):
         result = self.__logout()
         self.logged_in_user = None
         self.user_id = None
+        self.rank_token = None
+        self.csrftoken = None
         logger.info("Logged out")
         return result

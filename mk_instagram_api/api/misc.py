@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class MiscAPI(BaseAPI):
+class MiscAPI(LoginAPI):
     @post('/qe/sync/')
     def sync_features(self):
         return None, {

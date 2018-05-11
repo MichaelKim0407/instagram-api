@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class UserAPI(BaseAPI):
+class UserAPI(LoginAPI):
     @get('users/{user_id}/info/')
     def user_get_info(self, user_id):
         return {

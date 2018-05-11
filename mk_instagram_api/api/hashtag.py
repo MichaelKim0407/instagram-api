@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class HashtagAPI(BaseAPI):
+class HashtagAPI(LoginAPI):
     @get('feed/tag/{tag}/', ranked=True)
     def hashtag_feed(self, hashtag, max_id=None):
         return {

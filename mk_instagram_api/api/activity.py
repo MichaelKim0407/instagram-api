@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class ActivityAPI(BaseAPI):
+class ActivityAPI(LoginAPI):
     @get('news/inbox/')
     def activities_for_me(self):
         pass

@@ -19,6 +19,10 @@ class ResponseError(Exception):
 
 
 class SentryBlockError(ResponseError):
+    """
+    You have been blocked by Instagram from using this api.
+    """
+
     def __init__(self, response, message):
         self.message = message
         super().__init__(response)

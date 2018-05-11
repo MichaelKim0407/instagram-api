@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class ProfileAPI(BaseAPI):
+class ProfileAPI(LoginAPI):
     @post('accounts/current_user/?edit=true')
     def profile_get_data(self):
         pass

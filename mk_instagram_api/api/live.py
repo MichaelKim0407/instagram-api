@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class LiveAPI(BaseAPI):
+class LiveAPI(LoginAPI):
     @post('live/create/')
     def live_create(self, preview_width=1080, preview_height=1920, broadcast_message=''):
         return None, {

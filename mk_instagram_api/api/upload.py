@@ -13,7 +13,7 @@ except ImportError:
 __author__ = 'Michael'
 
 
-class UploadAPI(BaseAPI):
+class UploadAPI(LoginAPI):
     @endpoint('upload/photo/')
     def upload_photo(self, photo, caption=None, upload_id=None, is_sidecar=None):
         uri = 'upload/photo/'
@@ -23,7 +23,7 @@ class UploadAPI(BaseAPI):
         data = {
             'upload_id': upload_id,
             '_uuid': self.uuid,
-            '_csrftoken': self.token,
+            '_csrftoken': self.csrftoken,
             'image_compression': '{"lib_name":"jt","lib_version":"1.3.0","quality":"87"}',
             'photo': (
                 'pending_media_{}.jpg'.format(upload_id),
@@ -57,7 +57,7 @@ class UploadAPI(BaseAPI):
             upload_id = util.generate_upload_id()
         data = {
             'upload_id': upload_id,
-            '_csrftoken': self.token,
+            '_csrftoken': self.csrftoken,
             'media_type': '2',
             '_uuid': self.uuid,
         }
@@ -260,7 +260,7 @@ class UploadAPI(BaseAPI):
                 'source_height': clip.size[1],
             },
             'device': constant.DEVICE_SETTINGS,
-            '_csrftoken': self.token,
+            '_csrftoken': self.csrftoken,
             '_uuid': self.uuid,
             '_uid': self.user_id,
             'caption': caption,

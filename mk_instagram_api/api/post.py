@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class PostAPI(BaseAPI):
+class PostAPI(LoginAPI):
     @post('media/{media_id}/info/')
     def post_info(self, media_id):
         return {

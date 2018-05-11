@@ -3,7 +3,7 @@ from ._base import *
 __author__ = 'Michael'
 
 
-class LocationAPI(BaseAPI):
+class LocationAPI(LoginAPI):
     @get('feed/location/{location_id}/', ranked=True)
     def location_feed(self, location_id, max_id=None):
         return {
