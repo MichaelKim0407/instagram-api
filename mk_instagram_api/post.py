@@ -54,5 +54,17 @@ class Post(BaseObject):
             return None
         return self['caption']['text']
 
+    def like(self, like=True):
+        if like:
+            self.api.post_like(self.pk)
+        else:
+            self.api.post_unlike(self.pk)
+
+    def save(self, save=True):
+        if save:
+            self.api.post_save(self.pk)
+        else:
+            self.api.post_unsave(self.pk)
+
 
 from .user import User

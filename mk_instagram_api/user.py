@@ -99,7 +99,7 @@ class User(BaseObject):
     @big_list(big_key='more_available')
     def __posts_iter(api: InstagramAPI, user_id, max_id, min_timestamp=None):
         for item in api.posts_by_user(user_id, max_id, min_timestamp)['items']:
-            yield Post(**item)
+            yield Post(**item, api=api)
 
     def posts_iter(self, min_timestamp=None, limit=None) -> Iterable['Post']:
         return self.__posts_iter(
@@ -169,6 +169,30 @@ class LoggedInUser(User):
             self.api.profile_set_private()
         else:
             self.api.profile_set_public()
+
+    @staticmethod
+    @big_list(big_key='more_available')
+    def __liked_posts_iter(api: InstagramAPI, max_id):
+        for item in api.posts_liked(max_id)['items']:
+            yield Post(**item, api=api)
+
+    def liked_posts_iter(self, limit=None) -> Iterable['Post']:
+        return self.__liked_posts_iter(self.api, limit=limit)
+
+    def liked_posts(self, limit=None) -> List['Post']:
+        return list(self.liked_posts_iter(limit))
+
+    @staticmethod
+    @big_list(big_key='more_available')
+    def __saved_posts_iter(api: InstagramAPI, max_id):
+        for item in api.posts_saved(max_id)['items']:
+            yield Post(**item['media'], api=api)
+
+    def saved_posts_iter(self, limit=None) -> Iterable['Post']:
+        return self.__saved_posts_iter(self.api, limit=limit)
+
+    def saved_posts(self, limit=None) -> List['Post']:
+        return list(self.saved_posts_iter(limit))
 
 
 from .post import Post

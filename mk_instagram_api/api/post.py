@@ -67,8 +67,10 @@ class PostAPI(LoginAPI):
     # --- save ---
 
     @get('feed/saved')
-    def posts_saved(self):
-        pass
+    def posts_saved(self, max_id=None):
+        return None, {
+            'max_id': max_id,
+        }
 
     @post('media/{media_id}/save/')
     def post_save(self, media_id):
